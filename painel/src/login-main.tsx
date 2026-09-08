@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import { LoginScreen } from './screens/LoginScreen'
 import { PesquisasScreen } from './screens/PesquisasScreen'
-import { hasSession, startSession } from './session'
+import { hasSession, startSession, type SessionUser } from './session'
 
 function Gate() {
   const [screen, setScreen] = useState<'login' | 'pesquisas'>(
@@ -11,14 +11,14 @@ function Gate() {
   )
   const [fade, setFade] = useState(false)
 
-  const go = (next: 'pesquisas' | 'painel') => {
+  const go = (next: 'pesquisas' | 'painel', user?: SessionUser) => {
     setFade(true)
     window.setTimeout(() => {
       if (next === 'painel') {
         window.location.assign('/painel.html')
         return
       }
-      startSession()
+      if (user) startSession(user)
       setScreen('pesquisas')
       setFade(false)
     }, 420)
@@ -27,7 +27,7 @@ function Gate() {
   return (
     <div className={`gate${fade ? ' is-out' : ''}`}>
       {screen === 'login' ? (
-        <LoginScreen onEnter={() => go('pesquisas')} />
+        <LoginScreen onEnter={(user) => go('pesquisas', user)} />
       ) : (
         <PesquisasScreen onOpen={() => go('painel')} />
       )}

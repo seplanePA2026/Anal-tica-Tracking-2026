@@ -1473,6 +1473,69 @@ tr.is-sel {
   font-size: 14px;
 }
 
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.login-field input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font: inherit;
+  font-weight: 500;
+  color: var(--ink);
+  background: #faf8ff;
+}
+
+.login-field input:focus {
+  outline: 2px solid #c4b5fd;
+  border-color: #8b5cf6;
+}
+
+.login-pass {
+  position: relative;
+  display: block;
+}
+
+.login-pass input {
+  padding-right: 46px;
+}
+
+.eye-btn {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.eye-btn:hover {
+  color: var(--accent);
+  background: #f5f3ff;
+}
+
+.login-error {
+  margin: 0;
+  color: #b42318;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .login-submit {
   margin-top: 6px;
   border: 0;

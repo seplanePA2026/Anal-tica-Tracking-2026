@@ -13,6 +13,40 @@ export const DEMO_USER: SessionUser = {
   role: 'Analista',
 }
 
+const ACCOUNTS: {
+  user: string
+  password: string
+  profile: SessionUser
+}[] = [
+  {
+    user: 'joseremelo@gmail.com',
+    password: '123456',
+    profile: {
+      name: 'José Remelo',
+      email: 'joseremelo@gmail.com',
+      role: 'Analista',
+    },
+  },
+  {
+    user: 'admin',
+    password: 'admin',
+    profile: {
+      name: 'Admin',
+      email: 'admin@analitica.com',
+      role: 'Administrador',
+    },
+  },
+]
+
+export function authenticate(user: string, password: string): SessionUser | null {
+  const login = user.trim().toLowerCase()
+  const pass = password
+  const match = ACCOUNTS.find(
+    (a) => a.user.toLowerCase() === login && a.password === pass,
+  )
+  return match ? match.profile : null
+}
+
 export function hasSession() {
   return sessionStorage.getItem(SESSION_KEY) === '1'
 }
