@@ -8,6 +8,7 @@ import {
   meanScore,
 } from '../stats'
 import type { Row } from '../types'
+import { CrossTabPanel } from './CrossTabPanel'
 
 type Props = {
   fieldKey: string
@@ -94,6 +95,8 @@ export function QuestionBlock({ fieldKey, rows }: Props) {
           </tfoot>
         </table>
       </div>
+
+      <CrossTabPanel fieldKey={fieldKey} rows={rows} />
     </section>
   )
 }

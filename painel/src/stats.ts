@@ -12,7 +12,7 @@ export const BANNER_OPTIONS = [
   { id: 'sexo_idade', label: 'Sexo × faixa etária', key: 'sexo_idade' },
   { id: 'ESCOLARIDADE', label: 'Escolaridade', key: 'ESCOLARIDADE' },
   { id: 'religião', label: 'Religião', key: 'religião' },
-  { id: 'renda familiar', label: 'Renda familiar', key: 'renda familiar' },
+  { id: 'renda familiar', label: 'Salário mínimo (renda)', key: 'renda familiar' },
   { id: 'enquadramento político', label: 'Enquadramento político', key: 'enquadramento político' },
 ] as const
 

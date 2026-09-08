@@ -843,6 +843,97 @@ button, select { font-family: inherit; }
 
 .table-scroll { overflow: auto; margin: 8px 0 4px; }
 
+.cross-card {
+  margin-top: 16px;
+  padding: 14px 14px 10px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #faf8ff;
+  box-shadow: 0 8px 22px rgba(28, 20, 48, 0.04);
+}
+
+.cross-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.cross-head h4 {
+  font-size: 15px;
+  margin: 0;
+}
+
+.cross-select {
+  display: grid;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  min-width: min(260px, 100%);
+}
+
+.cross-select select {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.cross-note {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.cross-scroll {
+  margin-bottom: 4px;
+}
+
+.cross-table th {
+  min-width: 88px;
+  white-space: nowrap;
+}
+
+.cross-ban {
+  display: block;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.cross-ban-n {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.cross-cell-n {
+  display: block;
+  font-weight: 700;
+}
+
+.cross-cell-pct {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
