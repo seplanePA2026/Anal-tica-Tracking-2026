@@ -1,0 +1,103 @@
+import { useMemo } from 'react'
+import { fieldHeading, fieldLabel } from '../labels'
+import {
+  colorFor,
+  countBy,
+  formatN,
+  formatPctNum,
+  meanScore,
+} from '../stats'
+import type { Row } from '../types'
+
+type Props = {
+  fieldKey: string
+  rows: Row[]
+}
+
+export function QuestionBlock({ fieldKey, rows }: Props) {
+  const dist = useMemo(() => countBy(rows, fieldKey), [rows, fieldKey])
+  const maxN = dist.rows.reduce((m, r) => Math.max(m, r.n), 0) || 1
+  const sumN = dist.rows.reduce((s, r) => s + r.n, 0)
+  const score = fieldKey === 'nota Jerônimo' ? meanScore(rows, fieldKey) : null
+  const meta = fieldLabel(fieldKey)
+
+  return (
+    <section className="q-block" id={`q-${slug(fieldKey)}`}>
+      <header className="q-head">
+        {meta.code ? <p className="q-code">{meta.code}</p> : null}
+        <h3>{fieldHeading(fieldKey)}</h3>
+        <p>
+          N = {formatN(dist.total)}
+          {sumN === dist.total ? ' · soma das linhas = N' : ` · soma ${formatN(sumN)} ≠ N`}
+        </p>
+      </header>
+
+      {score && score.n > 0 ? (
+        <p className="score-line">
+          Média das notas numéricas 0–10:{' '}
+          <strong>
+            {score.mean?.toLocaleString('pt-BR', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
+          </strong>{' '}
+          ({formatN(score.n)} notas; {formatN(score.skipped)} sem nota numérica)
+        </p>
+      ) : null}
+
+      <div className="bars">
+        {dist.rows.map((r) => (
+          <div className="bar-row" key={r.label}>
+            <div className="bar-label" title={r.label}>
+              {r.label}
+            </div>
+            <div className="bar-track">
+              <div
+                className="bar-fill"
+                style={{
+                  width: `${(r.n / maxN) * 100}%`,
+                  background: colorFor(r.label),
+                }}
+              />
+            </div>
+            <div className="bar-n">{formatN(r.n)}</div>
+            <div className="bar-pct">{formatPctNum(r.pct)}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="table-scroll">
+        <table>
+          <caption>Distribuição — {meta.short}</caption>
+          <thead>
+            <tr>
+              <th>Resposta</th>
+              <th className="num">N</th>
+              <th className="num">%</th>
+            </tr>
+          </thead>
+          <tbody>
+            {dist.rows.map((r) => (
+              <tr key={r.label}>
+                <td>{r.label}</td>
+                <td className="num">{formatN(r.n)}</td>
+                <td className="num">{formatPctNum(r.pct)}</td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr>
+              <th>Total</th>
+              <th className="num">{formatN(dist.total)}</th>
+              <th className="num">{dist.total ? '100,0%' : '—'}</th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+  )
+}
+
+function slug(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '')
+}

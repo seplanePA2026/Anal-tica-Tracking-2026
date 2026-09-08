@@ -1,0 +1,9 @@
+painel/node_modules/
+painel/dist/
+painel/dist-ssr/
+*.local
+*.log
+.DS_Store
+.idea/
+.vscode/
+*.xlsx
