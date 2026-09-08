@@ -8,7 +8,7 @@
   },
   "routes": [
     {
-      "pattern": "analytics.analiticapesquisas.com",
+      "pattern": "analiticapesquisas.com",
       "custom_domain": true
     }
   ],

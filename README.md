@@ -28,7 +28,7 @@ cd painel
 npm run deploy
 ```
 
-Domínio de produção: **https://analytics.analiticapesquisas.com**
+Domínio de produção: **https://analiticapesquisas.com**
 
 Worker: `analitica-tracking`
 
