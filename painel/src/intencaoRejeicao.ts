@@ -129,3 +129,52 @@ export function candidateIntentionRejection(
 export function formatIRValue(n: number, pct: number): string {
   return `${formatPctNum(pct)} · ${formatN(n)}`
 }
+
+export type DayIRPoint = {
+  x: string
+  intentionN: number
+  intentionPct: number
+  rejectionN: number | null
+  rejectionPct: number | null
+}
+
+function matchCount(
+  dist: { rows: { label: string; n: number; pct: number }[] },
+  candidateName: string,
+): { n: number; pct: number } {
+  const key = baseCandidateName(candidateName)
+  const hit = dist.rows.find(
+    (r) => isCandidateLabel(r.label) && baseCandidateName(r.label) === key,
+  )
+  return { n: hit?.n ?? 0, pct: hit?.pct ?? 0 }
+}
+
+/** Evolução diária de intenção e rejeição para um candidato. */
+export function candidateDaySeries(
+  dayPoints: { label: string; rows: Row[] }[],
+  race: IntentionRejectionRace,
+  candidateName: string,
+): DayIRPoint[] {
+  return dayPoints.map((day) => {
+    const intention = countBy(day.rows, race.intentionKey)
+    const intHit = matchCount(intention, candidateName)
+    if (!race.rejectionKey) {
+      return {
+        x: day.label,
+        intentionN: intHit.n,
+        intentionPct: intHit.pct,
+        rejectionN: null,
+        rejectionPct: null,
+      }
+    }
+    const rejection = countBy(day.rows, race.rejectionKey)
+    const rejHit = matchCount(rejection, candidateName)
+    return {
+      x: day.label,
+      intentionN: intHit.n,
+      intentionPct: intHit.pct,
+      rejectionN: rejHit.n,
+      rejectionPct: rejHit.pct,
+    }
+  })
+}
