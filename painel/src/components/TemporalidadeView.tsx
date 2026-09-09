@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { fieldHeading, TEMPORAL_SECTIONS } from '../labels'
 import { colorFor, formatN, formatPctNum } from '../stats'
-import { RESEARCH_WAVES, questionEvolution } from '../temporal'
+import { RESEARCH_WAVES, questionEvolution, temporalPoints } from '../temporal'
 import { ALL, type Row } from '../types'
 
 type Props = {
@@ -54,16 +54,7 @@ function TemporalQuestionCard({ fieldKey, rows, municipalities }: CardProps) {
     return rows.filter((r) => r['Municípios'] === municipio)
   }, [rows, municipio])
 
-  const points = useMemo(
-    () => [
-      {
-        id: 'acumulado',
-        label: 'Acumulado',
-        rows: scoped,
-      },
-    ],
-    [scoped],
-  )
+  const points = useMemo(() => temporalPoints(scoped), [scoped])
 
   const series = useMemo(
     () =>
@@ -86,7 +77,8 @@ function TemporalQuestionCard({ fieldKey, rows, municipalities }: CardProps) {
       </div>
 
       <p className="temporal-n temporal-n-card">
-        {formatN(scoped.length)} entrevistas · 1 ponto consolidado
+        {formatN(scoped.length)} entrevistas · {points.length}{' '}
+        {points.length === 1 ? 'dia' : 'dias'}
         {municipio === ALL ? '' : ` · ${municipio}`}
       </p>
 
@@ -182,31 +174,42 @@ type PulseSeries = {
   points: { x: string; pct: number; n: number; total: number }[]
 }
 
-/** Gráfico estilo “ECG” em faixas: um candidato por linha, ponto perto do nome, sem sobreposição. */
+/** Gráfico estilo “ECG” em faixas: evolução dia a dia (6, 7 e 8) por candidato. */
 function PulseLineChart({ series }: { series: PulseSeries[] }) {
   const ranked = useMemo(
     () =>
       [...series].sort((a, b) => {
-        const pa = a.points[a.points.length - 1]?.pct ?? 0
-        const pb = b.points[b.points.length - 1]?.pct ?? 0
-        return pb - pa || a.label.localeCompare(b.label, 'pt-BR')
+        const na = a.points.reduce((s, p) => s + p.n, 0)
+        const nb = b.points.reduce((s, p) => s + p.n, 0)
+        return nb - na || a.label.localeCompare(b.label, 'pt-BR')
       }),
     [series],
   )
 
-  const rowH = 52
-  const pad = { top: 12, right: 24, bottom: 28, left: 168 }
+  const rowH = 72
+  const pad = { top: 16, right: 20, bottom: 32, left: 168 }
   const width = 720
   const height = pad.top + pad.bottom + Math.max(1, ranked.length) * rowH
-  const innerW = width - pad.left - pad.right
-  const xs = ranked[0]?.points.map((p) => p.x) ?? ['Acumulado']
+  const xs = ranked[0]?.points.map((p) => p.x) ?? []
+  const globalMax = Math.max(
+    10,
+    ...ranked.flatMap((s) => s.points.map((p) => p.pct)),
+  )
 
   const xPos = (i: number) => {
-    // Com 1 ponto, fica perto do nome; com vários, espalha no tempo.
-    if (xs.length <= 1) return pad.left + Math.min(56, innerW * 0.18)
-    return pad.left + (i / (xs.length - 1)) * innerW
+    const start = pad.left + 36
+    const end = width - pad.right - 28
+    if (xs.length <= 1) return start
+    return start + (i / (xs.length - 1)) * (end - start)
   }
-  const rowCenter = (row: number) => pad.top + row * rowH + rowH / 2
+
+  const yInRow = (row: number, pct: number) => {
+    const top = pad.top + row * rowH + 10
+    const band = rowH - 38
+    return top + band - (pct / globalMax) * band
+  }
+
+  const nameY = (row: number) => pad.top + row * rowH + rowH / 2 - 6
 
   return (
     <div className="line-chart-wrap pulse-chart-wrap">
@@ -214,22 +217,21 @@ function PulseLineChart({ series }: { series: PulseSeries[] }) {
         className="line-chart"
         viewBox={`0 0 ${width} ${height}`}
         role="img"
-        aria-label="Gráfico de temporalidade"
+        aria-label="Gráfico de temporalidade por dia"
       >
         {ranked.map((s, row) => {
-          const cy = rowCenter(row)
           const d = s.points
-            .map((_, i) => `${i === 0 ? 'M' : 'L'} ${xPos(i)} ${cy}`)
+            .map((p, i) => `${i === 0 ? 'M' : 'L'} ${xPos(i)} ${yInRow(row, p.pct)}`)
             .join(' ')
-          const lx = xPos(s.points.length - 1)
+          const baseline = pad.top + row * rowH + rowH - 2
 
           return (
             <g key={s.label}>
               <line
                 x1={pad.left}
                 x2={width - pad.right}
-                y1={cy}
-                y2={cy}
+                y1={baseline}
+                y2={baseline}
                 className="pulse-lane"
               />
               <path
@@ -240,19 +242,9 @@ function PulseLineChart({ series }: { series: PulseSeries[] }) {
                 strokeLinejoin="round"
                 strokeLinecap="round"
               />
-              <line
-                x1={pad.left}
-                x2={lx}
-                y1={cy}
-                y2={cy}
-                stroke={s.color}
-                strokeWidth="1.5"
-                strokeDasharray="3 4"
-                opacity="0.45"
-              />
               <text
                 x={pad.left - 10}
-                y={cy + 4}
+                y={nameY(row)}
                 className="pulse-name"
                 textAnchor="end"
                 fill={s.color}
@@ -260,40 +252,45 @@ function PulseLineChart({ series }: { series: PulseSeries[] }) {
                 <title>{s.label}</title>
                 {truncateLabel(s.label, 26)}
               </text>
-              {s.points.map((p, i) => (
-                <g key={`${s.label}-${p.x}`}>
-                  <circle
-                    cx={xPos(i)}
-                    cy={cy}
-                    r="6.5"
-                    fill={s.color}
-                    stroke="#fff"
-                    strokeWidth="2.25"
-                  >
-                    <title>
-                      {s.label}: {formatN(p.n)} · {formatPctNum(p.pct)}
-                    </title>
-                  </circle>
-                  <text
-                    x={xPos(i)}
-                    y={cy + 18}
-                    className="line-point-value"
-                    textAnchor="middle"
-                    fill={s.color}
-                  >
-                    {formatN(p.n)}
-                  </text>
-                  <text
-                    x={xPos(i)}
-                    y={cy + 32}
-                    className="line-point-pct"
-                    textAnchor="middle"
-                    fill={s.color}
-                  >
-                    {formatPctNum(p.pct)}
-                  </text>
-                </g>
-              ))}
+              {s.points.map((p, i) => {
+                const cy = yInRow(row, p.pct)
+                const cx = xPos(i)
+                return (
+                  <g key={`${s.label}-${p.x}`}>
+                    <circle
+                      cx={cx}
+                      cy={cy}
+                      r="6"
+                      fill={s.color}
+                      stroke="#fff"
+                      strokeWidth="2.25"
+                    >
+                      <title>
+                        {s.label} · {dayLabel(p.x)}: {formatN(p.n)} ·{' '}
+                        {formatPctNum(p.pct)}
+                      </title>
+                    </circle>
+                    <text
+                      x={cx}
+                      y={cy + 16}
+                      className="line-point-value"
+                      textAnchor="middle"
+                      fill={s.color}
+                    >
+                      {formatN(p.n)}
+                    </text>
+                    <text
+                      x={cx}
+                      y={cy + 28}
+                      className="line-point-pct"
+                      textAnchor="middle"
+                      fill={s.color}
+                    >
+                      {formatPctNum(p.pct)}
+                    </text>
+                  </g>
+                )
+              })}
             </g>
           )
         })}
@@ -302,16 +299,22 @@ function PulseLineChart({ series }: { series: PulseSeries[] }) {
           <text
             key={label}
             x={xPos(i)}
-            y={height - 8}
+            y={height - 10}
             className="line-axis"
             textAnchor="middle"
           >
-            {label}
+            {dayLabel(label)}
           </text>
         ))}
       </svg>
     </div>
   )
+}
+
+function dayLabel(label: string): string {
+  const m = label.match(/^0?(\d{1,2})\.(\d{2})$/)
+  if (m) return `${Number(m[1])}/${m[2]}`
+  return label
 }
 
 function truncateLabel(label: string, max: number): string {
