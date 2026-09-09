@@ -977,6 +977,68 @@ th.num, td.num { text-align: right; }
   flex-shrink: 0;
 }
 
+.tables-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.tables-hero-text {
+  flex: 1 1 280px;
+  min-width: 0;
+}
+
+.tables-export {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding-top: 4px;
+}
+
+.tables-export-btn {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(28, 20, 48, 0.05);
+}
+
+.tables-export-btn:hover:not(:disabled) {
+  border-color: #c4b5fd;
+  color: var(--accent);
+}
+
+.tables-export-btn:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.tables-export-btn-pdf {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.tables-export-btn-pdf:hover:not(:disabled) {
+  filter: brightness(1.05);
+  color: #fff;
+}
+
+.tables-export-error {
+  margin: 8px 0 0;
+  color: #c62828;
+  font-size: 13px;
+}
+
 .excel-wrap {
   flex: 1;
   min-height: 0;

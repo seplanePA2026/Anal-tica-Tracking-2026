@@ -1,4 +1,6 @@
-import { fieldColumn, fieldHeading, QUESTION_SEQUENCE } from '../labels'
+import { useState } from 'react'
+import { fieldHeading, QUESTION_SEQUENCE } from '../labels'
+import { exportTablesExcel, exportTablesPdf } from '../export/exportTables'
 import { formatN } from '../stats'
 import type { Dataset, Row } from '../types'
 
@@ -12,6 +14,33 @@ const LEAD_COLS = ['Municípios', 'folha', 'dia'] as const
 
 export function TablesView({ rows, scopeLabel }: Props) {
   const columns = [...LEAD_COLS, ...QUESTION_SEQUENCE]
+  const [busy, setBusy] = useState<'excel' | 'pdf' | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  async function onExportExcel() {
+    setError(null)
+    setBusy('excel')
+    try {
+      await new Promise((r) => window.setTimeout(r, 0))
+      exportTablesExcel(rows, QUESTION_SEQUENCE, scopeLabel)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Falha ao exportar Excel.')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function onExportPdf() {
+    setError(null)
+    setBusy('pdf')
+    try {
+      await exportTablesPdf(rows, QUESTION_SEQUENCE, scopeLabel)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Falha ao exportar PDF.')
+    } finally {
+      setBusy(null)
+    }
+  }
 
   if (!rows.length) {
     return (
@@ -23,14 +52,35 @@ export function TablesView({ rows, scopeLabel }: Props) {
 
   return (
     <div className="tables-view">
-      <header className="report-hero">
-        <p className="kicker">Tabelas</p>
-        <h2>{scopeLabel}</h2>
-        <p className="lede">
-          {formatN(rows.length)} entrevistas. Cada linha é uma entrevista; cada
-          coluna é uma pergunta do questionário. Use o filtro de município para
-          ver a tabela completa de Salvador, Simões Filho e demais praças.
-        </p>
+      <header className="report-hero tables-hero">
+        <div className="tables-hero-text">
+          <p className="kicker">Tabelas</p>
+          <h2>{scopeLabel}</h2>
+          <p className="lede">
+            {formatN(rows.length)} entrevistas. Cada linha é uma entrevista; cada
+            coluna é uma pergunta do questionário. Use o filtro de município para
+            ver a tabela completa de Salvador, Simões Filho e demais praças.
+          </p>
+          {error ? <p className="tables-export-error">{error}</p> : null}
+        </div>
+        <div className="tables-export">
+          <button
+            type="button"
+            className="tables-export-btn"
+            onClick={onExportExcel}
+            disabled={busy != null}
+          >
+            {busy === 'excel' ? 'Gerando Excel…' : 'Exportar Excel'}
+          </button>
+          <button
+            type="button"
+            className="tables-export-btn tables-export-btn-pdf"
+            onClick={onExportPdf}
+            disabled={busy != null}
+          >
+            {busy === 'pdf' ? 'Gerando PDF…' : 'Exportar PDF'}
+          </button>
+        </div>
       </header>
       <div className="excel-wrap">
         <table className="excel">
