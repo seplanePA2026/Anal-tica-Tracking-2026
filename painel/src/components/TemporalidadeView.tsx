@@ -288,7 +288,7 @@ type CountSeries = {
 }
 
 function CountLineChart({ series, height = 240 }: { series: CountSeries[]; height?: number }) {
-  const pad = { top: 20, right: 16, bottom: 36, left: 52 }
+  const pad = { top: 20, right: 16, bottom: 44, left: 52 }
   const width = 720
   const innerW = width - pad.left - pad.right
   const innerH = height - pad.top - pad.bottom
@@ -347,19 +347,28 @@ function CountLineChart({ series, height = 240 }: { series: CountSeries[]; heigh
                 strokeLinecap="round"
               />
               {s.points.map((p, i) => (
-                <circle
-                  key={`${s.label}-${p.x}`}
-                  cx={xPos(i)}
-                  cy={yPos(p.value)}
-                  r="6"
-                  fill={s.color}
-                  stroke="#fff"
-                  strokeWidth="2"
-                >
-                  <title>
-                    {s.label}: {formatN(p.value)} entrevistas
-                  </title>
-                </circle>
+                <g key={`${s.label}-${p.x}`}>
+                  <circle
+                    cx={xPos(i)}
+                    cy={yPos(p.value)}
+                    r="6"
+                    fill={s.color}
+                    stroke="#fff"
+                    strokeWidth="2"
+                  >
+                    <title>
+                      {s.label}: {formatN(p.value)} entrevistas
+                    </title>
+                  </circle>
+                  <text
+                    x={xPos(i)}
+                    y={yPos(p.value) + 22}
+                    className="line-point-value"
+                    textAnchor="middle"
+                  >
+                    {formatN(p.value)}
+                  </text>
+                </g>
               ))}
             </g>
           )
