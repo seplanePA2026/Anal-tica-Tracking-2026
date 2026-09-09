@@ -123,35 +123,56 @@ function TemporalIntencaoPresidente({
   const [municipio, setMunicipio] = useState(ALL)
   const scoped = useMunicipioScope(rows, municipio)
   const total = scoped.length
+  const days = useMemo(() => temporalPoints(scoped), [scoped])
 
   const topCandidates = useMemo(() => {
     const dist = countBy(scoped, PRESIDENT_FIELD)
-    const candidates = dist.rows
+    return dist.rows
       .filter((r) => isCandidateLabel(r.label))
       .slice(0, TOP_N)
-
-    let running = 0
-    return candidates.map((c) => {
-      running += c.n
-      return {
+      .map((c) => ({
         id: c.label,
         label: c.label,
         n: c.n,
         pct: total ? (c.n / total) * 100 : 0,
-        acumulado: running,
         color: colorFor(c.label),
-      }
-    })
+      }))
   }, [scoped, total])
 
+  const series = useMemo(() => {
+    return topCandidates.map((c) => {
+      let running = 0
+      const points = days.map((d) => {
+        const n = d.rows.filter((r) => r[PRESIDENT_FIELD] === c.label).length
+        running += n
+        const dayTotal = d.rows.length || 1
+        return {
+          x: dayDisplayLabel(d.label),
+          n,
+          acumulado: running,
+          pctDia: (n / dayTotal) * 100,
+        }
+      })
+      return { ...c, points }
+    })
+  }, [topCandidates, days])
+
   const topSum = topCandidates.reduce((s, c) => s + c.n, 0)
+
+  const dayBaseAcum = useMemo(() => {
+    let running = 0
+    return days.map((d) => {
+      running += d.rows.length
+      return { id: d.id, label: dayDisplayLabel(d.label), acumulado: running }
+    })
+  }, [days])
 
   return (
     <section className="temporal-group temporal-acumulado temporal-intencao-pres">
       <h3>Intenção de voto — presidente</h3>
       <p className="temporal-acumulado-lede">
-        Cinco principais candidatos na estimulada a presidente, no mesmo
-        recorte dos três dias de campo.
+        Cinco principais candidatos na estimulada a presidente, com linha de
+        acumulado por candidato nos dias 06, 07 e 08.
       </p>
 
       <article className="temporal-mini">
@@ -164,26 +185,209 @@ function TemporalIntencaoPresidente({
         {!scoped.length ? (
           <p className="empty-filter">Sem entrevistas neste recorte.</p>
         ) : (
-          <AcumuladoBody
-            heroLabel={
-              municipio === ALL
-                ? 'Total acumulado da pesquisa'
-                : `Total acumulado em ${municipio}`
-            }
-            heroValue={total}
-            heroHint={`${formatN(topSum)} votos nos 5 principais · base ${formatN(total)} entrevistas`}
-            items={topCandidates}
-            itemKind="Candidato"
-            chartAria="Intenção de voto dos cinco principais candidatos a presidente"
-            barLegend="Votos do candidato"
-            lineLegend="Acumulado dos 5"
-            defaultBarColor="#c4b5fd"
-            lineColor="#7C4DFF"
-            cardGridClass="acum-day-grid acum-cand-grid"
-          />
+          <>
+            <div className="acum-hero">
+              <p className="temporal-total-label">
+                {municipio === ALL
+                  ? 'Total acumulado da pesquisa'
+                  : `Total acumulado em ${municipio}`}
+              </p>
+              <p className="temporal-total-value">{formatN(total)}</p>
+              <p className="temporal-n temporal-n-card">
+                {formatN(topSum)} votos nos 5 principais · base{' '}
+                {formatN(total)} entrevistas
+              </p>
+            </div>
+
+            <div className="acum-day-grid acum-cand-grid">
+              {topCandidates.map((c) => (
+                <div key={c.id} className="acum-day-card">
+                  <p className="acum-day-label">{c.label}</p>
+                  <p className="acum-day-n">{formatN(c.n)}</p>
+                  <p className="acum-day-meta">{formatPctNum(c.pct)} do total</p>
+                </div>
+              ))}
+            </div>
+
+            <CandidateCumChart series={series} />
+
+            <div className="table-scroll acum-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Candidato</th>
+                    {days.map((d) => (
+                      <th key={d.id} className="num">
+                        Acum. {dayDisplayLabel(d.label)}
+                      </th>
+                    ))}
+                    <th className="num">Total</th>
+                    <th className="num">% do total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {series.map((s) => (
+                    <tr key={s.id}>
+                      <td>{s.label}</td>
+                      {s.points.map((p) => (
+                        <td key={p.x} className="num">
+                          {formatN(p.acumulado)}
+                        </td>
+                      ))}
+                      <td className="num">{formatN(s.n)}</td>
+                      <td className="num">{formatPctNum(s.pct)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <th>Base (entrevistas)</th>
+                    {dayBaseAcum.map((d) => (
+                      <th key={d.id} className="num">
+                        {formatN(d.acumulado)}
+                      </th>
+                    ))}
+                    <th className="num">{formatN(total)}</th>
+                    <th className="num">{total ? '100,0%' : '—'}</th>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </>
         )}
       </article>
     </section>
+  )
+}
+
+type CandPoint = {
+  x: string
+  n: number
+  acumulado: number
+  pctDia: number
+}
+
+type CandSeries = {
+  id: string
+  label: string
+  n: number
+  pct: number
+  color: string
+  points: CandPoint[]
+}
+
+function CandidateCumChart({ series }: { series: CandSeries[] }) {
+  if (!series.length || !series[0]?.points.length) return null
+
+  const pad = { top: 28, right: 24, bottom: 44, left: 52 }
+  const width = 720
+  const height = 300
+  const innerW = width - pad.left - pad.right
+  const innerH = height - pad.top - pad.bottom
+  const xs = series[0].points.map((p) => p.x)
+  const maxY = Math.max(1, ...series.flatMap((s) => s.points.map((p) => p.acumulado)))
+  const yMax = Math.ceil(maxY / 50) * 50 || 50
+
+  const xPos = (i: number) => {
+    if (xs.length <= 1) return pad.left + innerW / 2
+    return pad.left + (i / (xs.length - 1)) * innerW
+  }
+  const yPos = (value: number) => pad.top + innerH - (value / yMax) * innerH
+  const gridYs = [0, 0.25, 0.5, 0.75, 1].map((t) => t * yMax)
+
+  return (
+    <div className="line-chart-wrap acum-chart">
+      <svg
+        className="line-chart"
+        viewBox={`0 0 ${width} ${height}`}
+        role="img"
+        aria-label="Acumulado diário de intenção de voto por candidato a presidente"
+      >
+        {gridYs.map((g) => (
+          <g key={g}>
+            <line
+              x1={pad.left}
+              x2={pad.left + innerW}
+              y1={yPos(g)}
+              y2={yPos(g)}
+              className="line-grid"
+            />
+            <text
+              x={pad.left - 8}
+              y={yPos(g) + 3}
+              className="line-axis"
+              textAnchor="end"
+            >
+              {formatN(Math.round(g))}
+            </text>
+          </g>
+        ))}
+
+        {xs.map((label, i) => (
+          <text
+            key={label}
+            x={xPos(i)}
+            y={height - 14}
+            className="line-axis"
+            textAnchor="middle"
+          >
+            {label}
+          </text>
+        ))}
+
+        {series.map((s) => {
+          const d = s.points
+            .map((p, i) => `${i === 0 ? 'M' : 'L'} ${xPos(i)} ${yPos(p.acumulado)}`)
+            .join(' ')
+          return (
+            <g key={s.id}>
+              <path
+                d={d}
+                fill="none"
+                stroke={s.color}
+                strokeWidth="2.75"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+              {s.points.map((p, i) => (
+                <g key={`${s.id}-${p.x}`}>
+                  <circle
+                    cx={xPos(i)}
+                    cy={yPos(p.acumulado)}
+                    r="5"
+                    fill={s.color}
+                    stroke="#fff"
+                    strokeWidth="1.75"
+                  >
+                    <title>
+                      {s.label} · {p.x}: acum. {formatN(p.acumulado)} (+
+                      {formatN(p.n)} no dia)
+                    </title>
+                  </circle>
+                  <text
+                    x={xPos(i)}
+                    y={yPos(p.acumulado) - 10}
+                    className="line-point-value"
+                    textAnchor="middle"
+                    fill={s.color}
+                  >
+                    {formatN(p.acumulado)}
+                  </text>
+                </g>
+              ))}
+            </g>
+          )
+        })}
+      </svg>
+      <ul className="line-legend">
+        {series.map((s) => (
+          <li key={s.id}>
+            <span className="line-swatch" style={{ background: s.color }} />
+            {s.label}
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
 
