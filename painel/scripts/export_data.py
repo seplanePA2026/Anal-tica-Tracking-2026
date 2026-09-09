@@ -43,7 +43,7 @@ FIELD_GROUPS = [
     },
     {
         "id": "presidente",
-        "title": "Intenção e rejeição à Presidência da República",
+        "title": "Intenção de voto e rejeição a presidência",
         "keys": [
             "ESTIMULADA PRESIDENTE",
             "ESTIMULADA REJEIÇÃO PRESIDENTE cdd",

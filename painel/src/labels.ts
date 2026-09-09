@@ -267,7 +267,7 @@ export const QUESTION_SECTIONS: { id: string; title: string; keys: string[] }[] 
   },
   {
     id: 'presidente',
-    title: 'Intenção e rejeição à Presidência da República',
+    title: 'Intenção de voto e rejeição a presidência',
     keys: ['ESTIMULADA PRESIDENTE', 'ESTIMULADA REJEIÇÃO PRESIDENTE cdd'],
   },
   {
@@ -342,7 +342,7 @@ export const RESEARCH_SEQUENCE = RESEARCH_SECTIONS.flatMap((g) => g.keys)
 export const TEMPORAL_SECTIONS: { id: string; title: string; keys: string[] }[] = [
   {
     id: 'presidente',
-    title: 'Intenção e rejeição à Presidência da República',
+    title: 'Intenção de voto e rejeição a presidência',
     keys: ['ESTIMULADA PRESIDENTE', 'ESTIMULADA REJEIÇÃO PRESIDENTE cdd'],
   },
   {

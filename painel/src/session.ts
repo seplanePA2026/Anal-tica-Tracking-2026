@@ -28,6 +28,15 @@ const ACCOUNTS: {
     },
   },
   {
+    user: 'eduardo@gmail.com',
+    password: 'Analitica123456',
+    profile: {
+      name: 'Eduardo',
+      email: 'eduardo@gmail.com',
+      role: 'Analista',
+    },
+  },
+  {
     user: 'admin',
     password: 'admin',
     profile: {

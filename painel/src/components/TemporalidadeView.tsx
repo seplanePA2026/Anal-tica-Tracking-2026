@@ -186,30 +186,32 @@ function PulseLineChart({ series }: { series: PulseSeries[] }) {
     [series],
   )
 
-  const rowH = 72
+  const rowH = 84
   const pad = { top: 16, right: 20, bottom: 32, left: 168 }
   const width = 720
   const height = pad.top + pad.bottom + Math.max(1, ranked.length) * rowH
   const xs = ranked[0]?.points.map((p) => p.x) ?? []
   const globalMax = Math.max(
-    10,
+    1,
     ...ranked.flatMap((s) => s.points.map((p) => p.pct)),
   )
 
+  // Dias bem próximos → ângulos mais pontudos quando o % muda.
+  const dayGap = 34
+  const xStart = pad.left + 30
   const xPos = (i: number) => {
-    const start = pad.left + 36
-    const end = width - pad.right - 28
-    if (xs.length <= 1) return start
-    return start + (i / (xs.length - 1)) * (end - start)
+    if (xs.length <= 1) return xStart
+    return xStart + i * dayGap
   }
 
   const yInRow = (row: number, pct: number) => {
-    const top = pad.top + row * rowH + 10
-    const band = rowH - 38
+    const top = pad.top + row * rowH + 8
+    const band = rowH - 42
+    // Escala absoluta: 5% e 6% ficam vizinhos; 50% fica bem acima.
     return top + band - (pct / globalMax) * band
   }
 
-  const nameY = (row: number) => pad.top + row * rowH + rowH / 2 - 6
+  const nameY = (row: number) => pad.top + row * rowH + rowH / 2 - 8
 
   return (
     <div className="line-chart-wrap pulse-chart-wrap">
@@ -238,9 +240,10 @@ function PulseLineChart({ series }: { series: PulseSeries[] }) {
                 d={d}
                 fill="none"
                 stroke={s.color}
-                strokeWidth="2.75"
-                strokeLinejoin="round"
-                strokeLinecap="round"
+                strokeWidth="2.5"
+                strokeLinejoin="miter"
+                strokeLinecap="butt"
+                strokeMiterlimit={10}
               />
               <text
                 x={pad.left - 10}
@@ -260,10 +263,10 @@ function PulseLineChart({ series }: { series: PulseSeries[] }) {
                     <circle
                       cx={cx}
                       cy={cy}
-                      r="6"
+                      r="5.5"
                       fill={s.color}
                       stroke="#fff"
-                      strokeWidth="2.25"
+                      strokeWidth="2"
                     >
                       <title>
                         {s.label} · {dayLabel(p.x)}: {formatN(p.n)} ·{' '}
@@ -272,7 +275,7 @@ function PulseLineChart({ series }: { series: PulseSeries[] }) {
                     </circle>
                     <text
                       x={cx}
-                      y={cy + 16}
+                      y={cy + 15}
                       className="line-point-value"
                       textAnchor="middle"
                       fill={s.color}
@@ -281,7 +284,7 @@ function PulseLineChart({ series }: { series: PulseSeries[] }) {
                     </text>
                     <text
                       x={cx}
-                      y={cy + 28}
+                      y={cy + 26}
                       className="line-point-pct"
                       textAnchor="middle"
                       fill={s.color}
