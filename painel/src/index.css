@@ -1039,6 +1039,13 @@ th.num, td.num { text-align: right; }
   font-size: 13px;
 }
 
+.tables-export-progress {
+  margin: 8px 0 0;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .excel-wrap {
   flex: 1;
   min-height: 0;

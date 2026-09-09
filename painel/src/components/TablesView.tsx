@@ -15,30 +15,36 @@ const LEAD_COLS = ['Municípios', 'folha', 'dia'] as const
 export function TablesView({ rows, scopeLabel }: Props) {
   const columns = [...LEAD_COLS, ...QUESTION_SEQUENCE]
   const [busy, setBusy] = useState<'excel' | 'pdf' | null>(null)
+  const [progress, setProgress] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   async function onExportExcel() {
     setError(null)
+    setProgress(null)
     setBusy('excel')
     try {
-      await new Promise((r) => window.setTimeout(r, 0))
-      exportTablesExcel(rows, QUESTION_SEQUENCE, scopeLabel)
+      await exportTablesExcel(rows, QUESTION_SEQUENCE, scopeLabel)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Falha ao exportar Excel.')
     } finally {
       setBusy(null)
+      setProgress(null)
     }
   }
 
   async function onExportPdf() {
     setError(null)
     setBusy('pdf')
+    setProgress('Preparando PDF…')
     try {
-      await exportTablesPdf(rows, QUESTION_SEQUENCE, scopeLabel)
+      // Libera o clique atual antes do trabalho pesado.
+      await new Promise((r) => window.setTimeout(r, 30))
+      await exportTablesPdf(rows, QUESTION_SEQUENCE, scopeLabel, setProgress)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Falha ao exportar PDF.')
     } finally {
       setBusy(null)
+      setProgress(null)
     }
   }
 
@@ -61,6 +67,7 @@ export function TablesView({ rows, scopeLabel }: Props) {
             coluna é uma pergunta do questionário. Use o filtro de município para
             ver a tabela completa de Salvador, Simões Filho e demais praças.
           </p>
+          {progress ? <p className="tables-export-progress">{progress}</p> : null}
           {error ? <p className="tables-export-error">{error}</p> : null}
         </div>
         <div className="tables-export">
