@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
-import { fieldHeading, TEMPORAL_SECTIONS } from '../labels'
-import { colorFor, formatN, formatPctNum } from '../stats'
-import { RESEARCH_WAVES, questionEvolution, temporalPoints } from '../temporal'
+import { formatN } from '../stats'
+import { RESEARCH_WAVES } from '../temporal'
 import { ALL, type Row } from '../types'
 import { IntencaoRejeicaoPanel } from './IntencaoRejeicaoPanel'
 
@@ -22,75 +21,8 @@ export function TemporalidadeView({ rows, municipalities }: Props) {
 
       <IntencaoRejeicaoPanel rows={rows} municipalities={municipalities} />
 
-      <div className="temporal-grid">
-        {TEMPORAL_SECTIONS.map((g) => (
-          <section key={g.id} className="temporal-group">
-            <h3>{g.title}</h3>
-            {g.keys.map((key) => (
-              <TemporalQuestionCard
-                key={key}
-                fieldKey={key}
-                rows={rows}
-                municipalities={municipalities}
-              />
-            ))}
-          </section>
-        ))}
-      </div>
-
       <TemporalAcumulado rows={rows} municipalities={municipalities} />
     </div>
-  )
-}
-
-type CardProps = {
-  fieldKey: string
-  rows: Row[]
-  municipalities: string[]
-}
-
-function TemporalQuestionCard({ fieldKey, rows, municipalities }: CardProps) {
-  const [municipio, setMunicipio] = useState(ALL)
-
-  const scoped = useMemo(() => {
-    if (municipio === ALL) return rows
-    return rows.filter((r) => r['Municípios'] === municipio)
-  }, [rows, municipio])
-
-  const points = useMemo(() => temporalPoints(scoped), [scoped])
-
-  const series = useMemo(
-    () =>
-      questionEvolution(points, fieldKey, colorFor).filter((s) =>
-        s.points.some((p) => p.pct > 0),
-      ),
-    [points, fieldKey],
-  )
-
-  return (
-    <article className="temporal-mini">
-      <h4 className="temporal-mini-title">{fieldHeading(fieldKey)}</h4>
-
-      <div className="temporal-card-filters">
-        <MunicipioFilter
-          value={municipio}
-          onChange={setMunicipio}
-          municipalities={municipalities}
-        />
-      </div>
-
-      <p className="temporal-n temporal-n-card">
-        {formatN(scoped.length)} entrevistas · {points.length}{' '}
-        {points.length === 1 ? 'dia' : 'dias'}
-        {municipio === ALL ? '' : ` · ${municipio}`}
-      </p>
-
-      {scoped.length && series.length ? (
-        <PulseLineChart series={series} />
-      ) : (
-        <p className="empty-filter">Sem entrevistas neste recorte.</p>
-      )}
-    </article>
   )
 }
 
@@ -128,11 +60,17 @@ function TemporalAcumulado({
 
       <article className="temporal-mini">
         <div className="temporal-card-filters">
-          <MunicipioFilter
-            value={municipio}
-            onChange={setMunicipio}
-            municipalities={municipalities}
-          />
+          <label className="flt">
+            Município
+            <select value={municipio} onChange={(e) => setMunicipio(e.target.value)}>
+              <option value={ALL}>Bahia (todos)</option>
+              {municipalities.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
         <div className="temporal-total-card">
@@ -145,187 +83,6 @@ function TemporalAcumulado({
       </article>
     </section>
   )
-}
-
-function MunicipioFilter({
-  value,
-  onChange,
-  municipalities,
-}: {
-  value: string
-  onChange: (v: string) => void
-  municipalities: string[]
-}) {
-  return (
-    <label className="flt">
-      Município
-      <select value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value={ALL}>Bahia (todos)</option>
-        {municipalities.map((name) => (
-          <option key={name} value={name}>
-            {name}
-          </option>
-        ))}
-      </select>
-    </label>
-  )
-}
-
-type PulseSeries = {
-  label: string
-  color: string
-  points: { x: string; pct: number; n: number; total: number }[]
-}
-
-/** Gráfico estilo “ECG” em faixas: evolução dia a dia (6, 7 e 8) por candidato. */
-function PulseLineChart({ series }: { series: PulseSeries[] }) {
-  const ranked = useMemo(
-    () =>
-      [...series].sort((a, b) => {
-        const na = a.points.reduce((s, p) => s + p.n, 0)
-        const nb = b.points.reduce((s, p) => s + p.n, 0)
-        return nb - na || a.label.localeCompare(b.label, 'pt-BR')
-      }),
-    [series],
-  )
-
-  const rowH = 84
-  const pad = { top: 16, right: 28, bottom: 32, left: 150 }
-  const width = 720
-  const height = pad.top + pad.bottom + Math.max(1, ranked.length) * rowH
-  const xs = ranked[0]?.points.map((p) => p.x) ?? []
-  const globalMax = Math.max(
-    1,
-    ...ranked.flatMap((s) => s.points.map((p) => p.pct)),
-  )
-
-  // Ocupa toda a largura útil do card (do nome até a borda direita).
-  const xStart = pad.left + 18
-  const xEnd = width - pad.right
-  const xPos = (i: number) => {
-    if (xs.length <= 1) return (xStart + xEnd) / 2
-    return xStart + (i / (xs.length - 1)) * (xEnd - xStart)
-  }
-
-  const yInRow = (row: number, pct: number) => {
-    const top = pad.top + row * rowH + 8
-    const band = rowH - 42
-    // Escala absoluta: 5% e 6% ficam vizinhos; 50% fica bem acima.
-    return top + band - (pct / globalMax) * band
-  }
-
-  const nameY = (row: number) => pad.top + row * rowH + rowH / 2 - 8
-
-  return (
-    <div className="line-chart-wrap pulse-chart-wrap">
-      <svg
-        className="line-chart"
-        viewBox={`0 0 ${width} ${height}`}
-        role="img"
-        aria-label="Gráfico de temporalidade por dia"
-      >
-        {ranked.map((s, row) => {
-          const d = s.points
-            .map((p, i) => `${i === 0 ? 'M' : 'L'} ${xPos(i)} ${yInRow(row, p.pct)}`)
-            .join(' ')
-          const baseline = pad.top + row * rowH + rowH - 2
-
-          return (
-            <g key={s.label}>
-              <line
-                x1={pad.left}
-                x2={width - pad.right}
-                y1={baseline}
-                y2={baseline}
-                className="pulse-lane"
-              />
-              <path
-                d={d}
-                fill="none"
-                stroke={s.color}
-                strokeWidth="2.5"
-                strokeLinejoin="miter"
-                strokeLinecap="butt"
-                strokeMiterlimit={10}
-              />
-              <text
-                x={pad.left - 10}
-                y={nameY(row)}
-                className="pulse-name"
-                textAnchor="end"
-                fill={s.color}
-              >
-                <title>{s.label}</title>
-                {truncateLabel(s.label, 26)}
-              </text>
-              {s.points.map((p, i) => {
-                const cy = yInRow(row, p.pct)
-                const cx = xPos(i)
-                return (
-                  <g key={`${s.label}-${p.x}`}>
-                    <circle
-                      cx={cx}
-                      cy={cy}
-                      r="5.5"
-                      fill={s.color}
-                      stroke="#fff"
-                      strokeWidth="2"
-                    >
-                      <title>
-                        {s.label} · {dayLabel(p.x)}: {formatN(p.n)} ·{' '}
-                        {formatPctNum(p.pct)}
-                      </title>
-                    </circle>
-                    <text
-                      x={cx}
-                      y={cy + 15}
-                      className="line-point-value"
-                      textAnchor="middle"
-                      fill={s.color}
-                    >
-                      {formatN(p.n)}
-                    </text>
-                    <text
-                      x={cx}
-                      y={cy + 26}
-                      className="line-point-pct"
-                      textAnchor="middle"
-                      fill={s.color}
-                    >
-                      {formatPctNum(p.pct)}
-                    </text>
-                  </g>
-                )
-              })}
-            </g>
-          )
-        })}
-
-        {xs.map((label, i) => (
-          <text
-            key={label}
-            x={xPos(i)}
-            y={height - 10}
-            className="line-axis"
-            textAnchor="middle"
-          >
-            {dayLabel(label)}
-          </text>
-        ))}
-      </svg>
-    </div>
-  )
-}
-
-function dayLabel(label: string): string {
-  const m = label.match(/^0?(\d{1,2})\.(\d{2})$/)
-  if (m) return `${Number(m[1])}/${m[2]}`
-  return label
-}
-
-function truncateLabel(label: string, max: number): string {
-  if (label.length <= max) return label
-  return `${label.slice(0, max - 1)}…`
 }
 
 type CountSeries = {
