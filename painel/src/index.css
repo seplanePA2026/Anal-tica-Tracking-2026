@@ -1891,15 +1891,23 @@ tr.is-sel {
   max-width: 52rem;
 }
 
-.temporal-acumulado .temporal-q {
-  flex: 1 1 280px;
-  min-width: min(100%, 240px);
-  max-width: none;
+.temporal-total-card {
+  padding: 8px 2px 2px;
 }
 
-.temporal-acumulado .temporal-q select {
-  width: 100%;
-  max-width: none;
+.temporal-total-label {
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.temporal-total-value {
+  margin: 0;
+  font-size: clamp(36px, 8vw, 56px);
+  line-height: 1;
+  font-weight: 800;
+  color: var(--accent);
 }
 
 .line-chart-wrap {

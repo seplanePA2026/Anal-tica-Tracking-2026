@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { fieldHeading, TEMPORAL_SECTIONS, TEMPORAL_SEQUENCE } from '../labels'
+import { fieldHeading, TEMPORAL_SECTIONS } from '../labels'
 import { colorFor, formatN } from '../stats'
 import { RESEARCH_WAVES, questionEvolution, temporalPoints } from '../temporal'
 import { ALL, type Row } from '../types'
@@ -95,78 +95,37 @@ function TemporalAcumulado({
   municipalities: string[]
 }) {
   const [municipio, setMunicipio] = useState(ALL)
-  const [question, setQuestion] = useState(TEMPORAL_SEQUENCE[0] ?? '')
-  const [selected, setSelected] = useState<string[] | null>(null)
 
   const scoped = useMemo(() => {
     if (municipio === ALL) return rows
     return rows.filter((r) => r['Municípios'] === municipio)
   }, [rows, municipio])
 
-  const points = useMemo(
-    () => [
-      {
-        id: 'acumulado',
-        label: 'Acumulado',
-        rows: scoped,
-      },
-    ],
-    [scoped],
-  )
-
-  const chart = useCompareChart(points, question, selected, setSelected)
-
   return (
     <section className="temporal-group temporal-acumulado">
       <h3>Acumulado da pesquisa</h3>
       <p className="temporal-acumulado-lede">
-        Um único ponto com o total dos três dias de campo (06.09, 07.09 e 08.09).
+        Total consolidado dos três dias de campo (06.09, 07.09 e 08.09).
       </p>
 
       <article className="temporal-mini">
         <div className="temporal-card-filters">
           <MunicipioFilter
             value={municipio}
-            onChange={(v) => {
-              setMunicipio(v)
-              setSelected(null)
-            }}
+            onChange={setMunicipio}
             municipalities={municipalities}
-          />
-          <label className="flt temporal-q">
-            Pergunta
-            <select
-              value={question}
-              onChange={(e) => {
-                setQuestion(e.target.value)
-                setSelected(null)
-              }}
-            >
-              {TEMPORAL_SECTIONS.map((g) => (
-                <optgroup key={g.id} label={g.title}>
-                  {g.keys.map((key) => (
-                    <option key={key} value={key}>
-                      {fieldHeading(key)}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
-          </label>
-          <CompareFilter
-            optionLabels={chart.optionLabels}
-            pick={chart.pick}
-            summaryLabel={chart.summaryLabel}
-            onToggle={chart.toggleOption}
           />
         </div>
 
-        <p className="temporal-n temporal-n-card">
-          {formatN(scoped.length)} entrevistas · 1 ponto
-          {municipio === ALL ? '' : ` · ${municipio}`}
-        </p>
-
-        <ChartBody scopedLen={scoped.length} series={chart.series} height={240} />
+        <div className="temporal-total-card">
+          <p className="temporal-total-label">
+            {municipio === ALL ? 'Total da pesquisa' : `Total em ${municipio}`}
+          </p>
+          <p className="temporal-total-value">{formatN(scoped.length)}</p>
+          <p className="temporal-n temporal-n-card">
+            entrevistas consolidadas dos 3 dias
+          </p>
+        </div>
       </article>
     </section>
   )
