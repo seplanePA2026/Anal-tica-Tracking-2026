@@ -187,7 +187,7 @@ function PulseLineChart({ series }: { series: PulseSeries[] }) {
   )
 
   const rowH = 84
-  const pad = { top: 16, right: 20, bottom: 32, left: 168 }
+  const pad = { top: 16, right: 28, bottom: 32, left: 150 }
   const width = 720
   const height = pad.top + pad.bottom + Math.max(1, ranked.length) * rowH
   const xs = ranked[0]?.points.map((p) => p.x) ?? []
@@ -196,12 +196,12 @@ function PulseLineChart({ series }: { series: PulseSeries[] }) {
     ...ranked.flatMap((s) => s.points.map((p) => p.pct)),
   )
 
-  // Dias bem próximos → ângulos mais pontudos quando o % muda.
-  const dayGap = 78
-  const xStart = pad.left + 36
+  // Ocupa toda a largura útil do card (do nome até a borda direita).
+  const xStart = pad.left + 18
+  const xEnd = width - pad.right
   const xPos = (i: number) => {
-    if (xs.length <= 1) return xStart
-    return xStart + i * dayGap
+    if (xs.length <= 1) return (xStart + xEnd) / 2
+    return xStart + (i / (xs.length - 1)) * (xEnd - xStart)
   }
 
   const yInRow = (row: number, pct: number) => {

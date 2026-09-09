@@ -1730,7 +1730,7 @@ tr.is-sel {
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 16px;
-  padding: 14px 14px 8px;
+  padding: 14px 10px 8px;
   margin-bottom: 12px;
 }
 
@@ -1947,6 +1947,13 @@ tr.is-sel {
 
 .pulse-chart-wrap {
   margin-top: 4px;
+  margin-left: -4px;
+  margin-right: -4px;
+  width: calc(100% + 8px);
+}
+
+.pulse-chart-wrap .line-chart {
+  width: 100%;
 }
 
 .pulse-name {
