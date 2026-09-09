@@ -26,8 +26,6 @@ export function TemporalidadeView({ rows, municipalities }: Props) {
 
       <IntencaoRejeicaoPanel rows={rows} municipalities={municipalities} />
 
-      <TemporalAcumulado rows={rows} municipalities={municipalities} />
-
       <div className="temporal-intencao-row">
         <TemporalIntencaoCargo
           rows={rows}
@@ -49,7 +47,7 @@ export function TemporalidadeView({ rows, municipalities }: Props) {
         />
       </div>
 
-      <div className="temporal-intencao-row temporal-intencao-row-full">
+      <div className="temporal-intencao-row">
         <TemporalIntencaoCargo
           rows={rows}
           municipalities={municipalities}
@@ -57,9 +55,9 @@ export function TemporalidadeView({ rows, municipalities }: Props) {
           title="Intenção de voto — senador"
           lede="Seis principais candidatos na estimulada a senador (1ª opção), com linha de acumulado por candidato nos dias 06, 07 e 08."
           topN={6}
-          compact={false}
-          cardClassName="temporal-intencao-card temporal-intencao-card-full"
+          compact
         />
+        <TemporalAcumulado rows={rows} municipalities={municipalities} />
       </div>
     </div>
   )
@@ -105,7 +103,7 @@ function TemporalAcumulado({
   }, [days, total])
 
   return (
-    <section className="temporal-group temporal-acumulado">
+    <section className="temporal-group temporal-acumulado temporal-intencao-card">
       <h3>Acumulado da pesquisa</h3>
       <p className="temporal-acumulado-lede">
         Total consolidado e divisão das entrevistas por dia de campo (06, 07 e

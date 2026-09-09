@@ -1882,9 +1882,9 @@ tr.is-sel {
 }
 
 .temporal-acumulado {
-  margin-top: 28px;
-  padding-top: 8px;
-  border-top: 1px solid var(--line);
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
 }
 
 .ir-panel {
@@ -2148,11 +2148,11 @@ tr.is-sel {
 }
 
 .temporal-intencao-card .acum-cand-grid-6 {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .temporal-intencao-card-full .acum-cand-grid-6 {
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .temporal-intencao-card .acum-day-n {
