@@ -60,21 +60,44 @@ function TemporalQuestionCard({ fieldKey, rows, municipalities }: CardProps) {
     [points, fieldKey],
   )
   const optionLabels = useMemo(() => allSeries.map((s) => s.label), [allSeries])
-  const active = selected ?? optionLabels.slice(0, 6)
 
-  const series = useMemo(() => {
-    const pick = selected ?? allSeries.slice(0, 6).map((s) => s.label)
-    return allSeries.filter((s) => pick.includes(s.label))
-  }, [allSeries, selected])
+  const pick = useMemo(() => {
+    const defaults = optionLabels.slice(0, 2)
+    if (!selected) return defaults
+    const valid = selected.filter((l) => optionLabels.includes(l))
+    if (valid.length >= 2) return valid.slice(0, 2)
+    if (valid.length === 1) {
+      const fill = defaults.find((l) => l !== valid[0])
+      return fill ? [valid[0], fill] : valid
+    }
+    return defaults
+  }, [selected, optionLabels])
+
+  const series = useMemo(
+    () =>
+      pick
+        .map((label) => allSeries.find((s) => s.label === label))
+        .filter((s): s is NonNullable<typeof s> => Boolean(s)),
+    [allSeries, pick],
+  )
 
   function toggleOption(label: string) {
-    const base = selected ?? optionLabels.slice(0, 6)
-    if (base.includes(label)) {
-      setSelected(base.filter((x) => x !== label))
-    } else {
-      setSelected([...base, label])
-    }
+    setSelected((prev) => {
+      const base = prev?.length
+        ? prev.filter((l) => optionLabels.includes(l)).slice(0, 2)
+        : optionLabels.slice(0, 2)
+      if (base.includes(label)) {
+        return base.filter((x) => x !== label)
+      }
+      if (base.length < 2) return [...base, label]
+      return [base[1], label]
+    })
   }
+
+  const summaryLabel =
+    pick.length === 2
+      ? `${pick[0]} × ${pick[1]}`
+      : pick[0] ?? 'Selecione 2 opções'
 
   return (
     <article className="temporal-mini">
@@ -92,30 +115,37 @@ function TemporalQuestionCard({ fieldKey, rows, municipalities }: CardProps) {
             ))}
           </select>
         </label>
-      </div>
 
-      {optionLabels.length ? (
-        <div className="temporal-opt-filters" role="group" aria-label="Opções de resposta">
-          {optionLabels.map((label) => {
-            const on = active.includes(label)
-            return (
-              <button
-                key={label}
-                type="button"
-                className={`temporal-opt-chip${on ? ' on' : ''}`}
-                style={on ? { borderColor: colorFor(label), color: colorFor(label) } : undefined}
-                onClick={() => toggleOption(label)}
-              >
-                <span
-                  className="temporal-opt-dot"
-                  style={{ background: on ? colorFor(label) : '#c5bfd4' }}
-                />
-                {label}
-              </button>
-            )
-          })}
-        </div>
-      ) : null}
+        {optionLabels.length ? (
+          <details className="flt temporal-opt-panel">
+            <summary>
+              Comparar
+              <span className="temporal-opt-summary">{summaryLabel}</span>
+            </summary>
+            <div className="temporal-opt-list" role="group" aria-label="Opções de resposta">
+              <p className="temporal-opt-hint">Selecione 2 opções para o gráfico</p>
+              {optionLabels.map((label) => {
+                const on = pick.includes(label)
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    className={`temporal-opt-row${on ? ' on' : ''}`}
+                    onClick={() => toggleOption(label)}
+                  >
+                    <span
+                      className="temporal-opt-dot"
+                      style={{ background: on ? colorFor(label) : '#c5bfd4' }}
+                    />
+                    <span className="temporal-opt-label">{label}</span>
+                    {on ? <span className="temporal-opt-check">✓</span> : null}
+                  </button>
+                )
+              })}
+            </div>
+          </details>
+        ) : null}
+      </div>
 
       <p className="temporal-n temporal-n-card">
         {formatN(scoped.length)} entrevistas · {points.length}{' '}
@@ -127,7 +157,7 @@ function TemporalQuestionCard({ fieldKey, rows, municipalities }: CardProps) {
       ) : (
         <p className="empty-filter">
           {scoped.length
-            ? 'Selecione ao menos uma opção de resposta.'
+            ? 'Selecione duas opções de resposta para comparar.'
             : 'Sem entrevistas neste recorte.'}
         </p>
       )}
