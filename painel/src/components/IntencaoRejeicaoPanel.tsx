@@ -86,10 +86,10 @@ function RaceBlock({
   return (
     <div className="ir-race">
       <h4 className="ir-race-title">{race.title}</h4>
-      {!race.rejectionKey ? (
+      {race.id === 'governador' ? (
         <p className="ir-race-note">
-          Nesta pesquisa não há pergunta de rejeição para governador — só intenção
-          estimulada.
+          Rejeição = respostas “Conhece e não vota” nas perguntas de conhecimento e
+          voto (Jerônimo, ACM Neto e Mansur).
         </p>
       ) : null}
       <div className="ir-grid">
