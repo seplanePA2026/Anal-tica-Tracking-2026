@@ -287,6 +287,10 @@ function CandidateCumChart({ series }: { series: CandSeries[] }) {
   const xs = series[0].points.map((p) => p.x)
   const maxY = Math.max(1, ...series.flatMap((s) => s.points.map((p) => p.acumulado)))
   const yMax = Math.ceil(maxY / 50) * 50 || 50
+  /** Separação mínima entre pontos no mesmo dia (evita empilhar os menores). */
+  const minGap = 18
+  const yLo = pad.top + 14
+  const yHi = pad.top + innerH - 6
 
   const xPos = (i: number) => {
     if (xs.length <= 1) return pad.left + innerW / 2
@@ -294,6 +298,35 @@ function CandidateCumChart({ series }: { series: CandSeries[] }) {
   }
   const yPos = (value: number) => pad.top + innerH - (value / yMax) * innerH
   const gridYs = [0, 0.25, 0.5, 0.75, 1].map((t) => t * yMax)
+
+  // y visual por série/dia, com afastamento quando os acumulados ficam colados
+  const displayY: number[][] = series.map((s) =>
+    s.points.map((p) => yPos(p.acumulado)),
+  )
+  for (let day = 0; day < xs.length; day++) {
+    const items = series.map((s, si) => ({
+      si,
+      v: s.points[day]?.acumulado ?? 0,
+      y: displayY[si][day],
+    }))
+    items.sort((a, b) => a.v - b.v || a.si - b.si)
+
+    for (let k = 0; k < items.length; k++) {
+      if (k === 0) {
+        items[k].y = Math.min(yHi, items[k].y)
+      } else {
+        items[k].y = Math.min(items[k].y, items[k - 1].y - minGap)
+      }
+    }
+    for (let k = items.length - 1; k >= 0; k--) {
+      if (k === items.length - 1) {
+        items[k].y = Math.max(yLo, items[k].y)
+      } else {
+        items[k].y = Math.max(items[k].y, items[k + 1].y + minGap)
+      }
+    }
+    for (const it of items) displayY[it.si][day] = it.y
+  }
 
   return (
     <div className="line-chart-wrap acum-chart">
@@ -335,9 +368,9 @@ function CandidateCumChart({ series }: { series: CandSeries[] }) {
           </text>
         ))}
 
-        {series.map((s) => {
+        {series.map((s, si) => {
           const d = s.points
-            .map((p, i) => `${i === 0 ? 'M' : 'L'} ${xPos(i)} ${yPos(p.acumulado)}`)
+            .map((_, i) => `${i === 0 ? 'M' : 'L'} ${xPos(i)} ${displayY[si][i]}`)
             .join(' ')
           return (
             <g key={s.id}>
@@ -353,7 +386,7 @@ function CandidateCumChart({ series }: { series: CandSeries[] }) {
                 <g key={`${s.id}-${p.x}`}>
                   <circle
                     cx={xPos(i)}
-                    cy={yPos(p.acumulado)}
+                    cy={displayY[si][i]}
                     r="5"
                     fill={s.color}
                     stroke="#fff"
@@ -366,7 +399,7 @@ function CandidateCumChart({ series }: { series: CandSeries[] }) {
                   </circle>
                   <text
                     x={xPos(i)}
-                    y={yPos(p.acumulado) - 10}
+                    y={displayY[si][i] - 10}
                     className="line-point-value"
                     textAnchor="middle"
                     fill={s.color}
