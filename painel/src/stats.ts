@@ -74,6 +74,17 @@ export function norm(v: string | null | undefined): string {
   return v
 }
 
+/** Célula vazia ou resposta literal "Não respondeu" (não inclui "Não sabe"). */
+export function isNoAnswerLabel(label: string): boolean {
+  if (label === EMPTY) return true
+  const t = label
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+  return t === 'nao respondeu'
+}
+
 function bannerValue(row: Row, key: string): string {
   if (key === 'sexo_idade') {
     return `${norm(row.sexo)} · ${norm(row.idade)}`
@@ -127,13 +138,14 @@ export function sortLabels(labels: string[], key?: string): string[] {
 
 export type CountRow = { label: string; n: number; pct: number }
 
+/** Há células vazias ou "Não respondeu" — pergunta de filtro / não-resposta. */
 export function hasEmptyAnswers(rows: Row[], key: string): boolean {
-  return rows.some((r) => norm(r[key]) === EMPTY)
+  return rows.some((r) => isNoAnswerLabel(norm(r[key])))
 }
 
-/** Linhas com resposta efetiva (exclui células vazias → "(sem resposta)"). */
+/** Linhas com resposta efetiva (exclui vazio e "Não respondeu"). */
 export function answeredRows(rows: Row[], key: string): Row[] {
-  return rows.filter((r) => norm(r[key]) !== EMPTY)
+  return rows.filter((r) => !isNoAnswerLabel(norm(r[key])))
 }
 
 export function countBy(
@@ -146,7 +158,7 @@ export function countBy(
   let skippedEmpty = 0
   for (const r of rows) {
     const k = norm(r[key])
-    if (excludeEmpty && k === EMPTY) {
+    if (excludeEmpty && isNoAnswerLabel(k)) {
       skippedEmpty += 1
       continue
     }

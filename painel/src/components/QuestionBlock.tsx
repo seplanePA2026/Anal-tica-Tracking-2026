@@ -6,10 +6,10 @@ import {
   countBy,
   formatN,
   formatPctNum,
-  hasEmptyAnswers,
   meanScore,
+  norm,
 } from '../stats'
-import type { Row } from '../types'
+import { EMPTY, type Row } from '../types'
 import { CrossTabPanel } from './CrossTabPanel'
 
 type Props = {
@@ -20,17 +20,19 @@ type Props = {
 const SKIP_NOTE = '(SOMENTE PARA QUEM DECLAROU INTENÇÃO DE VOTO)'
 
 export function QuestionBlock({ fieldKey, rows }: Props) {
-  const skipPattern = useMemo(
-    () => hasEmptyAnswers(rows, fieldKey),
+  /** Nota só quando havia célula vazia (filtro de intenção / programa). */
+  const showSkipNote = useMemo(
+    () => rows.some((r) => norm(r[fieldKey]) === EMPTY),
     [rows, fieldKey],
   )
+  /** Sempre tira vazio e "Não respondeu"; % sobre quem respondeu (= 100%). */
   const dist = useMemo(
-    () => countBy(rows, fieldKey, { excludeEmpty: skipPattern }),
-    [rows, fieldKey, skipPattern],
+    () => countBy(rows, fieldKey, { excludeEmpty: true }),
+    [rows, fieldKey],
   )
   const crossRows = useMemo(
-    () => (skipPattern ? answeredRows(rows, fieldKey) : rows),
-    [rows, fieldKey, skipPattern],
+    () => answeredRows(rows, fieldKey),
+    [rows, fieldKey],
   )
   const maxN = dist.rows.reduce((m, r) => Math.max(m, r.n), 0) || 1
   const score = fieldKey === 'nota Jerônimo' ? meanScore(rows, fieldKey) : null
@@ -40,7 +42,7 @@ export function QuestionBlock({ fieldKey, rows }: Props) {
       <header className="q-head">
         <h3>
           {fieldHeading(fieldKey)}
-          {skipPattern ? <span className="q-skip-note"> {SKIP_NOTE}</span> : null}
+          {showSkipNote ? <span className="q-skip-note"> {SKIP_NOTE}</span> : null}
         </h3>
       </header>
 

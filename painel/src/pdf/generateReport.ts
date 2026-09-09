@@ -6,12 +6,12 @@ import {
   countBy,
   formatN,
   formatPctNum,
-  hasEmptyAnswers,
   leading,
   meanScore,
+  norm,
   share,
 } from '../stats'
-import type { Row } from '../types'
+import { EMPTY, type Row } from '../types'
 
 const PURPLE: [number, number, number] = [124, 58, 237]
 const INK: [number, number, number] = [27, 20, 48]
@@ -139,8 +139,8 @@ export async function generateReportPdf(rows: Row[], scopeLabel: string) {
 
     for (const key of group.keys) {
       await yieldFrame()
-      const skipPattern = hasEmptyAnswers(rows, key)
-      const dist = countBy(rows, key, { excludeEmpty: skipPattern })
+      const skipPattern = rows.some((r) => norm(r[key]) === EMPTY)
+      const dist = countBy(rows, key, { excludeEmpty: true })
       const heading = skipPattern
         ? `${fieldHeading(key)} (SOMENTE PARA QUEM DECLAROU INTENÇÃO DE VOTO)`
         : fieldHeading(key)
