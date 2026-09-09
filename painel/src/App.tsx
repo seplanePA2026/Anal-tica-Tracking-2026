@@ -5,6 +5,7 @@ import { KpiCards } from './components/KpiCards'
 import { MapView } from './components/MapView'
 import { Report } from './components/Report'
 import { TablesView } from './components/TablesView'
+import { TemporalidadeView } from './components/TemporalidadeView'
 import { UserMenu } from './components/UserMenu'
 import {
   ALL,
@@ -33,10 +34,12 @@ export default function App() {
     lista: false,
     relatorio: false,
     tabela: false,
+    temporalidade: false,
   })
   const stageRef = useRef<HTMLElement>(null)
   const reportRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<HTMLDivElement>(null)
+  const temporalRef = useRef<HTMLDivElement>(null)
   const listSideRef = useRef<HTMLDivElement>(null)
   const mapSideRef = useRef<HTMLElement>(null)
 
@@ -63,6 +66,7 @@ export default function App() {
     }
     reportRef.current && (reportRef.current.scrollTop = 0)
     tableRef.current && (tableRef.current.scrollTop = 0)
+    temporalRef.current && (temporalRef.current.scrollTop = 0)
     listSideRef.current && (listSideRef.current.scrollTop = 0)
     mapSideRef.current && (mapSideRef.current.scrollTop = 0)
     html.style.scrollBehavior = prev
@@ -164,6 +168,7 @@ export default function App() {
                 ['lista', 'Lista'],
                 ['relatorio', 'Relatórios'],
                 ['tabela', 'Tabelas'],
+                ['temporalidade', 'Temporalidade'],
               ] as const
             ).map(([id, label]) => (
               <button
@@ -310,6 +315,9 @@ export default function App() {
         {view === 'tabela' && !visited.tabela ? (
           <p className="pane-loading">Carregando tabelas…</p>
         ) : null}
+        {view === 'temporalidade' && !visited.temporalidade ? (
+          <p className="pane-loading">Carregando temporalidade…</p>
+        ) : null}
         {visited.mapa ? (
           <div className={`stage-pane stage-mapa${view === 'mapa' ? ' is-on' : ''}`}>
             <MapView
@@ -421,6 +429,22 @@ export default function App() {
           >
             <div className="report-page">
               <Report rows={rows} scopeLabel={scopeLabel} />
+            </div>
+          </div>
+        ) : null}
+
+        {visited.temporalidade ? (
+          <div
+            className={`stage-pane stage-temporalidade${view === 'temporalidade' ? ' is-on' : ''}`}
+            ref={temporalRef}
+          >
+            <div className="report-page">
+              <TemporalidadeView
+                rows={data.rows}
+                municipalities={munOpts}
+                municipio={filters.municipio}
+                onMunicipio={(v) => setFilter('municipio', v)}
+              />
             </div>
           </div>
         ) : null}

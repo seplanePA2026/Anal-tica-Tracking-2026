@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { fieldHeading, fieldLabel } from '../labels'
+import { fieldHeading } from '../labels'
 import {
   colorFor,
   countBy,
@@ -18,19 +18,12 @@ type Props = {
 export function QuestionBlock({ fieldKey, rows }: Props) {
   const dist = useMemo(() => countBy(rows, fieldKey), [rows, fieldKey])
   const maxN = dist.rows.reduce((m, r) => Math.max(m, r.n), 0) || 1
-  const sumN = dist.rows.reduce((s, r) => s + r.n, 0)
   const score = fieldKey === 'nota Jerônimo' ? meanScore(rows, fieldKey) : null
-  const meta = fieldLabel(fieldKey)
 
   return (
     <section className="q-block" id={`q-${slug(fieldKey)}`}>
       <header className="q-head">
-        {meta.code ? <p className="q-code">{meta.code}</p> : null}
         <h3>{fieldHeading(fieldKey)}</h3>
-        <p>
-          N = {formatN(dist.total)}
-          {sumN === dist.total ? ' · soma das linhas = N' : ` · soma ${formatN(sumN)} ≠ N`}
-        </p>
       </header>
 
       {score && score.n > 0 ? (
@@ -69,7 +62,6 @@ export function QuestionBlock({ fieldKey, rows }: Props) {
 
       <div className="table-scroll">
         <table>
-          <caption>Distribuição — {meta.short}</caption>
           <thead>
             <tr>
               <th>Resposta</th>

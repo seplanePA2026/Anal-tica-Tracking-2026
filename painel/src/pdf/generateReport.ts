@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { fieldHeading, fieldLabel, QUESTION_SECTIONS } from '../labels'
+import { fieldHeading, QUESTION_SECTIONS } from '../labels'
 import {
   colorFor,
   countBy,
@@ -47,7 +47,7 @@ export async function generateReportPdf(rows: Row[], scopeLabel: string) {
     doc.setFontSize(8)
     doc.setTextColor(...MUTED)
     doc.text(
-      `Analítica · Tracking Bahia 1 2026 · ${scopeLabel}`,
+      `Analítica · Pesquisa Estadual Bahia tracking · ${scopeLabel}`,
       left,
       pageH - 8,
     )
@@ -64,8 +64,7 @@ export async function generateReportPdf(rows: Row[], scopeLabel: string) {
   doc.text('Relatório completo', left, 32)
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(11)
-  doc.text('Questionário Codificado Tracking Bahia 1 2026', left, 42)
-  doc.text('Campo: 6 e 7 de setembro de 2026', left, 50)
+  doc.text('Pesquisa Estadual Bahia tracking', left, 42)
 
   doc.setTextColor(...INK)
   doc.setFont('helvetica', 'bold')
@@ -140,7 +139,6 @@ export async function generateReportPdf(rows: Row[], scopeLabel: string) {
     for (const key of group.keys) {
       await yieldFrame()
       const dist = countBy(rows, key)
-      const meta = fieldLabel(key)
       const heading = fieldHeading(key)
       const titleLines = doc.splitTextToSize(heading, width) as string[]
       const score = key === 'nota Jerônimo' ? meanScore(rows, key) : null
@@ -158,15 +156,10 @@ export async function generateReportPdf(rows: Row[], scopeLabel: string) {
       doc.setTextColor(...INK)
       doc.text(titleLines, left, y)
       y += titleLines.length * 4.6 + 2
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(8)
-      doc.setTextColor(...MUTED)
-      const nLine = `N = ${formatN(dist.total)}${
-        meta.short ? ` · ${meta.short}` : ''
-      }`
-      doc.text(nLine, left, y)
-      y += 5
       if (score && score.n > 0 && score.mean != null) {
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(8)
+        doc.setTextColor(...MUTED)
         doc.text(
           `Média das notas 0–10: ${score.mean.toLocaleString('pt-BR', {
             minimumFractionDigits: 2,

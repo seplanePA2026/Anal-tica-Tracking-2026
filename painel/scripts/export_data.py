@@ -4,13 +4,14 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[2]
-SOURCE = ROOT / "Pesquisa_Estadual_Bahia_26_06 e 07 de set.xlsx"
+SOURCE = ROOT / "BD Pesquisa_Estadual_Bahia_26_.xlsx"
 OUT = Path(__file__).resolve().parents[1] / "public" / "data.json"
 
 EXCLUDE = {
@@ -29,13 +30,20 @@ EXCLUDE = {
 
 FIELD_GROUPS = [
     {
-        "id": "identificacao",
-        "title": "P01–P02 · Identificação",
-        "keys": ["sexo", "idade"],
+        "id": "perfil",
+        "title": "Perfil do entrevistado",
+        "keys": [
+            "sexo",
+            "idade",
+            "religião",
+            "ESCOLARIDADE",
+            "renda familiar",
+            "frequentou templo",
+        ],
     },
     {
         "id": "presidente",
-        "title": "P03–P04 · Presidente",
+        "title": "Intenção e rejeição à Presidência da República",
         "keys": [
             "ESTIMULADA PRESIDENTE",
             "ESTIMULADA REJEIÇÃO PRESIDENTE cdd",
@@ -43,12 +51,12 @@ FIELD_GROUPS = [
     },
     {
         "id": "posicao",
-        "title": "P05 · Posição política",
+        "title": "Autoidentificação no espectro político",
         "keys": ["enquadramento político"],
     },
     {
         "id": "governador",
-        "title": "P06–P15 · Governo do Estado",
+        "title": "Corrida ao Governo da Bahia: nomes, apoios e firmeza do voto",
         "keys": [
             "CANDIDATO A GOV DE LULA",
             "CANDIDATO A GOV DE FLAVIO",
@@ -64,7 +72,7 @@ FIELD_GROUPS = [
     },
     {
         "id": "senado",
-        "title": "P16–P18 · Senado",
+        "title": "Intenção e rejeição ao Senado pela Bahia",
         "keys": [
             "ESTIMULADA SENADOR 1ª OPÇÃO",
             "ESTIMULADA SENADOR  2ª OPÇÃO",
@@ -73,12 +81,12 @@ FIELD_GROUPS = [
     },
     {
         "id": "expectativas",
-        "title": "P19–P20 · Expectativas",
+        "title": "Expectativas de resultado e impacto local",
         "keys": ["QUEM VAI GANHAR", "candidato que ajudará o município"],
     },
     {
         "id": "programa",
-        "title": "P21–P22 · Programa eleitoral",
+        "title": "Percepção do horário eleitoral e dos programas de TV",
         "keys": [
             "ACOMPANHAMENTO PROGRAMA",
             "MELHOR PROGRAMA",
@@ -91,23 +99,13 @@ FIELD_GROUPS = [
     },
     {
         "id": "avaliacao",
-        "title": "P23–P26 · Avaliação",
+        "title": "Avaliação de governo: Lula, Jerônimo e prefeitos",
         "keys": [
             "aprovação do gov Lula",
             "aval Lula",
             "aprovação do gov Jerônimo",
             "nota Jerônimo",
             "aprovação do prefeito",
-        ],
-    },
-    {
-        "id": "perfil",
-        "title": "P27–P30 · Perfil",
-        "keys": [
-            "religião",
-            "frequentou templo",
-            "ESCOLARIDADE",
-            "renda familiar",
         ],
     },
 ]
@@ -136,15 +134,37 @@ def cell(v):
     return s if s else None
 
 
+def folha_label(sheet: str) -> str:
+    """Normalize sheet tab names like '06.09Corrigido' -> '06.09'."""
+    s = sheet.strip()
+    m = re.match(r"^(\d{2}\.\d{2})", s, flags=re.IGNORECASE)
+    if m:
+        return m.group(1)
+    return re.sub(r"(?i)corrigido$", "", s).strip() or s
+
+
+def strip_frame(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    for col in out.columns:
+        if out[col].dtype == object:
+            out[col] = out[col].map(
+                lambda v: v.strip() if isinstance(v, str) else v
+            )
+    return out
+
+
 def main() -> None:
     if not SOURCE.exists():
         raise SystemExit(f"Planilha não encontrada: {SOURCE}")
 
     frames = []
-    sheets = pd.ExcelFile(SOURCE).sheet_names
-    for sheet in sheets:
-        df = pd.read_excel(SOURCE, sheet_name=sheet, dtype=object)
-        df["__folha"] = sheet
+    sheet_map: list[tuple[str, str]] = []
+    sheets_raw = pd.ExcelFile(SOURCE).sheet_names
+    for sheet in sheets_raw:
+        df = strip_frame(pd.read_excel(SOURCE, sheet_name=sheet, dtype=object))
+        label = folha_label(sheet)
+        sheet_map.append((sheet, label))
+        df["__folha"] = label
         frames.append(df)
     raw = pd.concat(frames, ignore_index=True)
 
@@ -188,19 +208,31 @@ def main() -> None:
         if m["n"] != counts.get(m["name"], 0):
             raise SystemExit(f"Inconsistência de N em {m['name']}")
 
+    expected_keys = [k for g in FIELD_GROUPS for k in g["keys"]]
+    sample_cols = set(rows[0].keys()) if rows else set()
+    missing_in_source = [k for k in expected_keys if k not in sample_cols]
+    extra_note_missing = ["estado civil"]
+    for k in extra_note_missing:
+        if k not in missing_in_source:
+            missing_in_source.append(k)
+
+    sheets = [label for _, label in sheet_map]
     payload = {
         "meta": {
             "sourceFile": SOURCE.name,
             "sheets": sheets,
+            "sheetsRaw": [raw_name for raw_name, _ in sheet_map],
             "n": len(rows),
             "nPorFolha": {s: int((raw["__folha"] == s).sum()) for s in sheets},
             "excludedFields": sorted(EXCLUDE),
-            "missingInSource": ["estado civil"],
+            "missingInSource": missing_in_source,
             "notes": [
+                "Base regenerada a partir de BD Pesquisa_Estadual_Bahia_26_.xlsx.",
                 "Valores copiados da planilha sem alteração, interpolação ou exclusão de entrevistas.",
                 "Campos do pesquisador e dados pessoais do entrevistado não entram na visualização.",
                 "Coordenadas do mapa são a mediana do GPS válido de cada município (excluídos pares 0,0).",
                 "Nomes de município, categorias e textos de resposta são os da planilha.",
+                "Campo de 6, 7 e 8 de setembro de 2026 (folhas 06.09, 07.09 e 08.09).",
                 "O campo estado civil não existe na planilha e não foi criado.",
             ],
         },
@@ -216,6 +248,7 @@ def main() -> None:
     )
     print(f"OK n={len(rows)} municipios={len(municipalities)} -> {OUT}")
     print("n por folha", payload["meta"]["nPorFolha"])
+    print("sheets", sheets)
 
 
 if __name__ == "__main__":

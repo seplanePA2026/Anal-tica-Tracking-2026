@@ -12,7 +12,14 @@ type Props = {
   rows: Row[]
 }
 
-const NO_CROSS = new Set(['sexo', 'idade'])
+const NO_CROSS = new Set([
+  'sexo',
+  'idade',
+  'religião',
+  'frequentou templo',
+  'ESCOLARIDADE',
+  'renda familiar',
+])
 
 export function CrossTabPanel({ fieldKey, rows }: Props) {
   const banners = useMemo(
@@ -50,16 +57,8 @@ export function CrossTabPanel({ fieldKey, rows }: Props) {
         </label>
       </div>
 
-      <p className="cross-note">
-        % na coluna = participação da resposta dentro de cada categoria de{' '}
-        <strong>{banner.label.toLowerCase()}</strong>. N da coluna no cabeçalho.
-      </p>
-
       <div className="table-scroll cross-scroll">
         <table className="cross-table">
-          <caption>
-            {fieldKey} × {banner.label}
-          </caption>
           <thead>
             <tr>
               <th>Resposta</th>

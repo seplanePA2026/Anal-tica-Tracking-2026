@@ -18,6 +18,7 @@ export type Dataset = {
   meta: {
     sourceFile: string
     sheets: string[]
+    sheetsRaw?: string[]
     n: number
     nPorFolha: Record<string, number>
     excludedFields: string[]
@@ -60,4 +61,4 @@ export const EMPTY_FILTERS: Filters = {
   answerValue: ALL,
 }
 
-export type ViewId = 'mapa' | 'lista' | 'tabela' | 'relatorio'
+export type ViewId = 'mapa' | 'lista' | 'tabela' | 'relatorio' | 'temporalidade'

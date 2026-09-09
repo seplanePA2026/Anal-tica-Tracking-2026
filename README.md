@@ -34,11 +34,13 @@ Worker: `analitica-tracking`
 
 ## Dados
 
-- Microdados publicados: `public/data.json` (gerado a partir da planilha, sem PII de pesquisador).
-- A planilha Excel original **não** vai no GitHub.
+- Base atual: `BD Pesquisa_Estadual_Bahia_26_.xlsx` (campo 6, 7 e 8 de setembro de 2026).
+- Microdados publicados: `painel/public/data.json` (gerado a partir da planilha, sem PII de pesquisador).
+- A planilha Excel **não** vai no GitHub.
 - Regenerar JSON (local, com a planilha na pasta pai):
 
 ```bash
+cd painel
 npm run export-data
 ```
 
