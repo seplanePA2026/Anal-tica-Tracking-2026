@@ -1938,6 +1938,16 @@ tr.is-sel {
   font-family: var(--sans);
 }
 
+.pulse-chart-wrap {
+  margin-top: 4px;
+}
+
+.pulse-name {
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--sans);
+}
+
 .line-legend {
   list-style: none;
   margin: 8px 0 4px;
