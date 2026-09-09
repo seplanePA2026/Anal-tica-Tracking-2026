@@ -13,7 +13,7 @@ export function PesquisasScreen({ onOpen }: Props) {
         <h1>Selecione a pesquisa</h1>
         <button type="button" className="pesquisa-card" onClick={onOpen}>
           <span className="pesquisa-tag">Bahia · 2026</span>
-          <strong>Pesquisa Tracking Bahia Estadual</strong>
+          <strong>Pesquisa Tracking Estadual Bahia</strong>
           <span className="pesquisa-meta">Tracking estadual</span>
         </button>
       </section>

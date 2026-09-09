@@ -197,8 +197,8 @@ function PulseLineChart({ series }: { series: PulseSeries[] }) {
   )
 
   // Dias bem próximos → ângulos mais pontudos quando o % muda.
-  const dayGap = 34
-  const xStart = pad.left + 30
+  const dayGap = 78
+  const xStart = pad.left + 36
   const xPos = (i: number) => {
     if (xs.length <= 1) return xStart
     return xStart + i * dayGap

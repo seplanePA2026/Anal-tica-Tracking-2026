@@ -13,7 +13,7 @@ export type ResearchWave = {
 export const RESEARCH_WAVES: ResearchWave[] = [
   {
     id: 'tracking-bahia-1',
-    label: 'Pesquisa Tracking Bahia Estadual',
+    label: 'Pesquisa Tracking Estadual Bahia',
     period: '',
   },
 ]

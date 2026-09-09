@@ -47,7 +47,7 @@ export async function generateReportPdf(rows: Row[], scopeLabel: string) {
     doc.setFontSize(8)
     doc.setTextColor(...MUTED)
     doc.text(
-      `Analítica · Pesquisa Tracking Bahia Estadual · ${scopeLabel}`,
+      `Analítica · Pesquisa Tracking Estadual Bahia · ${scopeLabel}`,
       left,
       pageH - 8,
     )
@@ -64,7 +64,7 @@ export async function generateReportPdf(rows: Row[], scopeLabel: string) {
   doc.text('Relatório completo', left, 32)
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(11)
-  doc.text('Pesquisa Tracking Bahia Estadual', left, 42)
+  doc.text('Pesquisa Tracking Estadual Bahia', left, 42)
 
   doc.setTextColor(...INK)
   doc.setFont('helvetica', 'bold')
