@@ -182,39 +182,31 @@ type PulseSeries = {
   points: { x: string; pct: number; n: number; total: number }[]
 }
 
-/** Gráfico estilo “ECG”: nomes à esquerda, ponto e valor abaixo — pronto para mais pontos no tempo. */
-function PulseLineChart({ series, height = 300 }: { series: PulseSeries[]; height?: number }) {
-  const pad = { top: 22, right: 44, bottom: 44, left: 158 }
+/** Gráfico estilo “ECG” em faixas: um candidato por linha, ponto perto do nome, sem sobreposição. */
+function PulseLineChart({ series }: { series: PulseSeries[] }) {
+  const ranked = useMemo(
+    () =>
+      [...series].sort((a, b) => {
+        const pa = a.points[a.points.length - 1]?.pct ?? 0
+        const pb = b.points[b.points.length - 1]?.pct ?? 0
+        return pb - pa || a.label.localeCompare(b.label, 'pt-BR')
+      }),
+    [series],
+  )
+
+  const rowH = 44
+  const pad = { top: 12, right: 24, bottom: 28, left: 168 }
   const width = 720
+  const height = pad.top + pad.bottom + Math.max(1, ranked.length) * rowH
   const innerW = width - pad.left - pad.right
-  const innerH = height - pad.top - pad.bottom
-  const xs = series[0]?.points.map((p) => p.x) ?? ['Acumulado']
-  const maxY = Math.max(10, ...series.flatMap((s) => s.points.map((p) => p.pct)))
-  const yMax = Math.min(100, Math.ceil(maxY / 10) * 10 || 10)
+  const xs = ranked[0]?.points.map((p) => p.x) ?? ['Acumulado']
 
   const xPos = (i: number) => {
-    if (xs.length <= 1) return pad.left + innerW * 0.62
+    // Com 1 ponto, fica perto do nome; com vários, espalha no tempo.
+    if (xs.length <= 1) return pad.left + Math.min(56, innerW * 0.18)
     return pad.left + (i / (xs.length - 1)) * innerW
   }
-  const yPos = (pct: number) => pad.top + innerH - (pct / yMax) * innerH
-  const gridYs = [0, 0.25, 0.5, 0.75, 1].map((t) => t * yMax)
-
-  // Empurra levemente labels muito próximos para não sobrepor.
-  const labelY = useMemo(() => {
-    const ranked = [...series]
-      .map((s) => ({
-        label: s.label,
-        y: yPos(s.points[s.points.length - 1]?.pct ?? 0),
-      }))
-      .sort((a, b) => a.y - b.y)
-    const minGap = 16
-    for (let i = 1; i < ranked.length; i++) {
-      if (ranked[i].y - ranked[i - 1].y < minGap) {
-        ranked[i].y = ranked[i - 1].y + minGap
-      }
-    }
-    return new Map(ranked.map((r) => [r.label, r.y]))
-  }, [series, yMax, height])
+  const rowCenter = (row: number) => pad.top + row * rowH + rowH / 2
 
   return (
     <div className="line-chart-wrap pulse-chart-wrap">
@@ -224,43 +216,22 @@ function PulseLineChart({ series, height = 300 }: { series: PulseSeries[]; heigh
         role="img"
         aria-label="Gráfico de temporalidade"
       >
-        {gridYs.map((g) => (
-          <g key={g}>
-            <line
-              x1={pad.left}
-              x2={pad.left + innerW}
-              y1={yPos(g)}
-              y2={yPos(g)}
-              className="line-grid"
-            />
-            <text
-              x={pad.left + innerW + 8}
-              y={yPos(g) + 3}
-              className="line-axis"
-              textAnchor="start"
-            >
-              {g}%
-            </text>
-          </g>
-        ))}
-
-        {xs.map((label, i) => (
-          <text key={label} x={xPos(i)} y={height - 12} className="line-axis" textAnchor="middle">
-            {label}
-          </text>
-        ))}
-
-        {series.map((s) => {
+        {ranked.map((s, row) => {
+          const cy = rowCenter(row)
           const d = s.points
-            .map((p, i) => `${i === 0 ? 'M' : 'L'} ${xPos(i)} ${yPos(p.pct)}`)
+            .map((_, i) => `${i === 0 ? 'M' : 'L'} ${xPos(i)} ${cy}`)
             .join(' ')
-          const last = s.points[s.points.length - 1]
-          const cy = yPos(last?.pct ?? 0)
           const lx = xPos(s.points.length - 1)
-          const nameY = labelY.get(s.label) ?? cy
 
           return (
             <g key={s.label}>
+              <line
+                x1={pad.left}
+                x2={width - pad.right}
+                y1={cy}
+                y2={cy}
+                className="pulse-lane"
+              />
               <path
                 d={d}
                 fill="none"
@@ -268,7 +239,6 @@ function PulseLineChart({ series, height = 300 }: { series: PulseSeries[]; heigh
                 strokeWidth="2.75"
                 strokeLinejoin="round"
                 strokeLinecap="round"
-                opacity="0.9"
               />
               <line
                 x1={pad.left}
@@ -276,25 +246,25 @@ function PulseLineChart({ series, height = 300 }: { series: PulseSeries[]; heigh
                 y1={cy}
                 y2={cy}
                 stroke={s.color}
-                strokeWidth="1.25"
+                strokeWidth="1.5"
                 strokeDasharray="3 4"
-                opacity="0.35"
+                opacity="0.45"
               />
               <text
                 x={pad.left - 10}
-                y={nameY + 4}
+                y={cy + 4}
                 className="pulse-name"
                 textAnchor="end"
                 fill={s.color}
               >
                 <title>{s.label}</title>
-                {truncateLabel(s.label, 24)}
+                {truncateLabel(s.label, 26)}
               </text>
               {s.points.map((p, i) => (
                 <g key={`${s.label}-${p.x}`}>
                   <circle
                     cx={xPos(i)}
-                    cy={yPos(p.pct)}
+                    cy={cy}
                     r="6.5"
                     fill={s.color}
                     stroke="#fff"
@@ -306,7 +276,7 @@ function PulseLineChart({ series, height = 300 }: { series: PulseSeries[]; heigh
                   </circle>
                   <text
                     x={xPos(i)}
-                    y={yPos(p.pct) + 22}
+                    y={cy + 20}
                     className="line-point-value"
                     textAnchor="middle"
                     fill={s.color}
@@ -318,6 +288,18 @@ function PulseLineChart({ series, height = 300 }: { series: PulseSeries[]; heigh
             </g>
           )
         })}
+
+        {xs.map((label, i) => (
+          <text
+            key={label}
+            x={xPos(i)}
+            y={height - 8}
+            className="line-axis"
+            textAnchor="middle"
+          >
+            {label}
+          </text>
+        ))}
       </svg>
     </div>
   )

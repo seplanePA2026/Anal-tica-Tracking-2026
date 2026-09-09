@@ -1948,6 +1948,11 @@ tr.is-sel {
   font-family: var(--sans);
 }
 
+.pulse-lane {
+  stroke: #f0ebf7;
+  stroke-width: 1;
+}
+
 .line-legend {
   list-style: none;
   margin: 8px 0 4px;

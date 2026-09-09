@@ -104,7 +104,7 @@ export async function generateReportPdf(rows: Row[], scopeLabel: string) {
         pres ? `${pres.label} · ${formatPctNum(pres.pct)}` : '—',
       ],
       [
-        'Maior índice governador',
+        'Maior índice de intenção de voto para governador',
         gov ? `${gov.label} · ${formatPctNum(gov.pct)}` : '—',
       ],
       ['Aprova governo Lula', `${formatPctNum(apLula.pct)} (${formatN(apLula.n)})`],

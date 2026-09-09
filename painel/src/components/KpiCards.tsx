@@ -39,7 +39,7 @@ export function KpiCards({ rows }: Props) {
         </p>
       </article>
       <article className="kpi">
-        <p className="kpi-label">Maior índice governador</p>
+        <p className="kpi-label">Maior índice de intenção de voto para governador</p>
         <p className="kpi-value">{gov ? formatPctNum(gov.pct) : '—'}</p>
         <p className="kpi-hint">
           {gov ? `${gov.label} · ${formatN(gov.n)}` : 'sem respostas'}
