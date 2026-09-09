@@ -11,7 +11,8 @@ type Props = {
 }
 
 const PRESIDENT_FIELD = 'ESTIMULADA PRESIDENTE'
-const TOP_N = 5
+const GOVERNOR_FIELD = 'ESTIMULADA GOVERNADOR'
+const SENATOR_FIELD = 'ESTIMULADA SENADOR 1ª OPÇÃO'
 
 export function TemporalidadeView({ rows, municipalities }: Props) {
   const wave = RESEARCH_WAVES[0]
@@ -28,8 +29,37 @@ export function TemporalidadeView({ rows, municipalities }: Props) {
       <TemporalAcumulado rows={rows} municipalities={municipalities} />
 
       <div className="temporal-intencao-row">
-        <TemporalIntencaoPresidente rows={rows} municipalities={municipalities} />
-        <TemporalIntencaoGovernadorPlaceholder />
+        <TemporalIntencaoCargo
+          rows={rows}
+          municipalities={municipalities}
+          fieldKey={PRESIDENT_FIELD}
+          title="Intenção de voto — presidente"
+          lede="Cinco principais candidatos na estimulada a presidente, com linha de acumulado por candidato nos dias 06, 07 e 08."
+          topN={5}
+          compact
+        />
+        <TemporalIntencaoCargo
+          rows={rows}
+          municipalities={municipalities}
+          fieldKey={GOVERNOR_FIELD}
+          title="Intenção de voto — governador"
+          lede="Três principais candidatos na estimulada a governador, com linha de acumulado por candidato nos dias 06, 07 e 08."
+          topN={3}
+          compact
+        />
+      </div>
+
+      <div className="temporal-intencao-row temporal-intencao-row-full">
+        <TemporalIntencaoCargo
+          rows={rows}
+          municipalities={municipalities}
+          fieldKey={SENATOR_FIELD}
+          title="Intenção de voto — senador"
+          lede="Seis principais candidatos na estimulada a senador (1ª opção), com linha de acumulado por candidato nos dias 06, 07 e 08."
+          topN={6}
+          compact={false}
+          cardClassName="temporal-intencao-card temporal-intencao-card-full"
+        />
       </div>
     </div>
   )
@@ -116,12 +146,24 @@ function TemporalAcumulado({
   )
 }
 
-function TemporalIntencaoPresidente({
+function TemporalIntencaoCargo({
   rows,
   municipalities,
+  fieldKey,
+  title,
+  lede,
+  topN,
+  compact,
+  cardClassName = 'temporal-intencao-card',
 }: {
   rows: Row[]
   municipalities: string[]
+  fieldKey: string
+  title: string
+  lede: string
+  topN: number
+  compact: boolean
+  cardClassName?: string
 }) {
   const [municipio, setMunicipio] = useState(ALL)
   const scoped = useMunicipioScope(rows, municipio)
@@ -129,10 +171,10 @@ function TemporalIntencaoPresidente({
   const days = useMemo(() => temporalPoints(scoped), [scoped])
 
   const topCandidates = useMemo(() => {
-    const dist = countBy(scoped, PRESIDENT_FIELD)
+    const dist = countBy(scoped, fieldKey)
     return dist.rows
       .filter((r) => isCandidateLabel(r.label))
-      .slice(0, TOP_N)
+      .slice(0, topN)
       .map((c) => ({
         id: c.label,
         label: c.label,
@@ -140,13 +182,13 @@ function TemporalIntencaoPresidente({
         pct: total ? (c.n / total) * 100 : 0,
         color: colorFor(c.label),
       }))
-  }, [scoped, total])
+  }, [scoped, total, fieldKey, topN])
 
   const series = useMemo(() => {
     return topCandidates.map((c) => {
       let running = 0
       const points = days.map((d) => {
-        const n = d.rows.filter((r) => r[PRESIDENT_FIELD] === c.label).length
+        const n = d.rows.filter((r) => r[fieldKey] === c.label).length
         running += n
         const dayTotal = d.rows.length || 1
         return {
@@ -158,7 +200,7 @@ function TemporalIntencaoPresidente({
       })
       return { ...c, points }
     })
-  }, [topCandidates, days])
+  }, [topCandidates, days, fieldKey])
 
   const topSum = topCandidates.reduce((s, c) => s + c.n, 0)
 
@@ -170,13 +212,17 @@ function TemporalIntencaoPresidente({
     })
   }, [days])
 
+  const gridClass =
+    topN <= 3
+      ? 'acum-day-grid acum-cand-grid acum-cand-grid-3'
+      : topN >= 6
+        ? 'acum-day-grid acum-cand-grid acum-cand-grid-6'
+        : 'acum-day-grid acum-cand-grid'
+
   return (
-    <section className="temporal-group temporal-acumulado temporal-intencao-card">
-      <h3>Intenção de voto — presidente</h3>
-      <p className="temporal-acumulado-lede">
-        Cinco principais candidatos na estimulada a presidente, com linha de
-        acumulado por candidato nos dias 06, 07 e 08.
-      </p>
+    <section className={`temporal-group temporal-acumulado ${cardClassName}`}>
+      <h3>{title}</h3>
+      <p className="temporal-acumulado-lede">{lede}</p>
 
       <article className="temporal-mini">
         <MunicipioFilter
@@ -197,12 +243,12 @@ function TemporalIntencaoPresidente({
               </p>
               <p className="temporal-total-value">{formatN(total)}</p>
               <p className="temporal-n temporal-n-card">
-                {formatN(topSum)} votos nos 5 principais · base{' '}
+                {formatN(topSum)} votos nos {topN} principais · base{' '}
                 {formatN(total)} entrevistas
               </p>
             </div>
 
-            <div className="acum-day-grid acum-cand-grid">
+            <div className={gridClass}>
               {topCandidates.map((c) => (
                 <div key={c.id} className="acum-day-card">
                   <p className="acum-day-label">{c.label}</p>
@@ -212,7 +258,7 @@ function TemporalIntencaoPresidente({
               ))}
             </div>
 
-            <CandidateCumChart series={series} compact />
+            <CandidateCumChart series={series} compact={compact} />
 
             <div className="table-scroll acum-table acum-table-compact">
               <table>
@@ -277,28 +323,6 @@ type CandSeries = {
   pct: number
   color: string
   points: CandPoint[]
-}
-
-function TemporalIntencaoGovernadorPlaceholder() {
-  return (
-    <section className="temporal-group temporal-acumulado temporal-intencao-card temporal-intencao-placeholder">
-      <h3>Intenção de voto — governador</h3>
-      <p className="temporal-acumulado-lede">
-        Em breve: acumulado por candidato a governador, no mesmo formato do card
-        de presidente.
-      </p>
-      <article className="temporal-mini temporal-placeholder-body">
-        <div className="acum-hero">
-          <p className="temporal-total-label">Total acumulado da pesquisa</p>
-          <p className="temporal-total-value temporal-total-muted">—</p>
-          <p className="temporal-n temporal-n-card">Aguardando dados</p>
-        </div>
-        <div className="temporal-placeholder-chart" aria-hidden="true">
-          <p>Gráfico e tabela de governador virão aqui.</p>
-        </div>
-      </article>
-    </section>
-  )
 }
 
 function CandidateCumChart({
@@ -367,7 +391,7 @@ function CandidateCumChart({
         className="line-chart"
         viewBox={`0 0 ${width} ${height}`}
         role="img"
-        aria-label="Acumulado diário de intenção de voto por candidato a presidente"
+        aria-label="Acumulado diário de intenção de voto por candidato"
       >
         {gridYs.map((g) => (
           <g key={g}>
