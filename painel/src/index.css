@@ -2285,6 +2285,15 @@ tr.is-sel {
   font-family: var(--sans);
 }
 
+.acum-point-label {
+  font-size: 10px;
+  font-weight: 700;
+  paint-order: stroke;
+  stroke: #fff;
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
 .line-point-pct {
   font-size: 11px;
   font-weight: 600;

@@ -335,28 +335,30 @@ function CandidateCumChart({
   if (!series.length || !series[0]?.points.length) return null
 
   const pad = compact
-    ? { top: 24, right: 16, bottom: 40, left: 40 }
-    : { top: 28, right: 24, bottom: 44, left: 52 }
-  const width = compact ? 520 : 720
-  const height = compact ? 240 : 300
+    ? { top: 22, right: 44, bottom: 36, left: 18 }
+    : { top: 26, right: 56, bottom: 40, left: 20 }
+  const width = compact ? 640 : 920
+  const height = compact ? 260 : 320
   const innerW = width - pad.left - pad.right
   const innerH = height - pad.top - pad.bottom
   const xs = series[0].points.map((p) => p.x)
   const maxY = Math.max(1, ...series.flatMap((s) => s.points.map((p) => p.acumulado)))
   const yMax = Math.ceil(maxY / 50) * 50 || 50
-  /** Separação mínima entre pontos no mesmo dia (evita empilhar os menores). */
-  const minGap = compact ? 14 : 18
-  const yLo = pad.top + 14
-  const yHi = pad.top + innerH - 6
+  /** Separação mínima entre pontos no mesmo dia. */
+  const minGap = compact ? 20 : 24
+  const yLo = pad.top + 16
+  const yHi = pad.top + innerH - 10
 
   const xPos = (i: number) => {
     if (xs.length <= 1) return pad.left + innerW / 2
-    return pad.left + (i / (xs.length - 1)) * innerW
+    // margens internas maiores = mais espaço entre 06/09, 07/09 e 08/09
+    const edge = Math.min(56, innerW * 0.12)
+    const usable = innerW - edge * 2
+    return pad.left + edge + (i / (xs.length - 1)) * usable
   }
   const yPos = (value: number) => pad.top + innerH - (value / yMax) * innerH
-  const gridYs = [0, 0.25, 0.5, 0.75, 1].map((t) => t * yMax)
+  const gridYs = [0, 0.5, 1].map((t) => t * yMax)
 
-  // y visual por série/dia, com afastamento quando os acumulados ficam colados
   const displayY: number[][] = series.map((s) =>
     s.points.map((p) => yPos(p.acumulado)),
   )
@@ -369,20 +371,43 @@ function CandidateCumChart({
     items.sort((a, b) => a.v - b.v || a.si - b.si)
 
     for (let k = 0; k < items.length; k++) {
-      if (k === 0) {
-        items[k].y = Math.min(yHi, items[k].y)
-      } else {
-        items[k].y = Math.min(items[k].y, items[k - 1].y - minGap)
-      }
+      if (k === 0) items[k].y = Math.min(yHi, items[k].y)
+      else items[k].y = Math.min(items[k].y, items[k - 1].y - minGap)
     }
     for (let k = items.length - 1; k >= 0; k--) {
-      if (k === items.length - 1) {
-        items[k].y = Math.max(yLo, items[k].y)
-      } else {
-        items[k].y = Math.max(items[k].y, items[k + 1].y + minGap)
-      }
+      if (k === items.length - 1) items[k].y = Math.max(yLo, items[k].y)
+      else items[k].y = Math.max(items[k].y, items[k + 1].y + minGap)
     }
     for (const it of items) displayY[it.si][day] = it.y
+  }
+
+  /** Rank no dia (0 = menor) para alternar acima/abaixo. */
+  const rankAtDay: number[][] = xs.map((_, day) => {
+    const order = series
+      .map((s, si) => ({ si, v: s.points[day]?.acumulado ?? 0 }))
+      .sort((a, b) => a.v - b.v || a.si - b.si)
+    const ranks = new Array(series.length).fill(0)
+    order.forEach((o, rank) => {
+      ranks[o.si] = rank
+    })
+    return ranks
+  })
+
+  function labelPlacement(si: number, day: number, cx: number, cy: number) {
+    const last = xs.length - 1
+    if (day === 0) {
+      return { x: cx - 8, y: cy + 3, anchor: 'end' as const }
+    }
+    if (day === last) {
+      return { x: cx + 8, y: cy + 3, anchor: 'start' as const }
+    }
+    // dias do meio: ímpares acima, pares abaixo — longe da linha
+    const above = rankAtDay[day][si] % 2 === 1
+    return {
+      x: cx,
+      y: above ? cy - 11 : cy + 14,
+      anchor: 'middle' as const,
+    }
   }
 
   return (
@@ -394,30 +419,21 @@ function CandidateCumChart({
         aria-label="Acumulado diário de intenção de voto por candidato"
       >
         {gridYs.map((g) => (
-          <g key={g}>
-            <line
-              x1={pad.left}
-              x2={pad.left + innerW}
-              y1={yPos(g)}
-              y2={yPos(g)}
-              className="line-grid"
-            />
-            <text
-              x={pad.left - 8}
-              y={yPos(g) + 3}
-              className="line-axis"
-              textAnchor="end"
-            >
-              {formatN(Math.round(g))}
-            </text>
-          </g>
+          <line
+            key={g}
+            x1={pad.left}
+            x2={pad.left + innerW}
+            y1={yPos(g)}
+            y2={yPos(g)}
+            className="line-grid"
+          />
         ))}
 
         {xs.map((label, i) => (
           <text
             key={label}
             x={xPos(i)}
-            y={height - 14}
+            y={height - 12}
             className="line-axis"
             textAnchor="middle"
           >
@@ -435,36 +451,41 @@ function CandidateCumChart({
                 d={d}
                 fill="none"
                 stroke={s.color}
-                strokeWidth="2.5"
+                strokeWidth="2.25"
                 strokeLinejoin="round"
                 strokeLinecap="round"
               />
-              {s.points.map((p, i) => (
-                <g key={`${s.id}-${p.x}`}>
-                  <circle
-                    cx={xPos(i)}
-                    cy={displayY[si][i]}
-                    r="4.5"
-                    fill={s.color}
-                    stroke="#fff"
-                    strokeWidth="1.75"
-                  >
-                    <title>
-                      {s.label} · {p.x}: acum. {formatN(p.acumulado)} (+
-                      {formatN(p.n)} no dia)
-                    </title>
-                  </circle>
-                  <text
-                    x={xPos(i)}
-                    y={displayY[si][i] - 9}
-                    className="line-point-value"
-                    textAnchor="middle"
-                    fill={s.color}
-                  >
-                    {formatN(p.acumulado)}
-                  </text>
-                </g>
-              ))}
+              {s.points.map((p, i) => {
+                const cx = xPos(i)
+                const cy = displayY[si][i]
+                const lab = labelPlacement(si, i, cx, cy)
+                return (
+                  <g key={`${s.id}-${p.x}`}>
+                    <circle
+                      cx={cx}
+                      cy={cy}
+                      r="4"
+                      fill={s.color}
+                      stroke="#fff"
+                      strokeWidth="1.5"
+                    >
+                      <title>
+                        {s.label} · {p.x}: acum. {formatN(p.acumulado)} (+
+                        {formatN(p.n)} no dia)
+                      </title>
+                    </circle>
+                    <text
+                      x={lab.x}
+                      y={lab.y}
+                      className="line-point-value acum-point-label"
+                      textAnchor={lab.anchor}
+                      fill={s.color}
+                    >
+                      {formatN(p.acumulado)}
+                    </text>
+                  </g>
+                )
+              })}
             </g>
           )
         })}
