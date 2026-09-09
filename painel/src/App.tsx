@@ -111,7 +111,14 @@ export default function App() {
   const selectMun = useCallback((name: string) => {
     setFilters((prev) => ({
       ...prev,
-      municipio: prev.municipio === name ? ALL : name,
+      municipio: name,
+    }))
+  }, [])
+
+  const clearMun = useCallback(() => {
+    setFilters((prev) => ({
+      ...prev,
+      municipio: ALL,
     }))
   }, [])
 
@@ -324,6 +331,7 @@ export default function App() {
               municipalities={mapMunicipalities}
               selected={filters.municipio === ALL ? null : filters.municipio}
               onSelect={selectMun}
+              onClear={clearMun}
               visible={view === 'mapa'}
             />
             <aside className="map-side" ref={mapSideRef}>
@@ -332,7 +340,7 @@ export default function App() {
               <p className="lede">
                 {filters.municipio === ALL
                   ? 'Pesquisa completa. Clique um ponto no mapa para ver o município.'
-                  : 'Resultado local. Os valores mudam a cada município selecionado.'}
+                  : 'Resultado local. Clique no mapa (fora do ponto) para voltar à Bahia.'}
               </p>
               <KpiCards rows={munRows} />
               <button

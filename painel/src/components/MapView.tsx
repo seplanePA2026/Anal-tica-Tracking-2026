@@ -6,17 +6,27 @@ type Props = {
   municipalities: Municipality[]
   selected: string | null
   onSelect: (name: string) => void
+  /** Clique no mapa (fora dos pontos) volta para a Bahia. */
+  onClear?: () => void
   visible?: boolean
 }
 
-export function MapView({ municipalities, selected, onSelect, visible = true }: Props) {
+export function MapView({
+  municipalities,
+  selected,
+  onSelect,
+  onClear,
+  visible = true,
+}: Props) {
   const hostRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const layerRef = useRef<L.LayerGroup | null>(null)
   const fittedRef = useRef(false)
   const onSelectRef = useRef(onSelect)
+  const onClearRef = useRef(onClear)
   const [ready, setReady] = useState(false)
   onSelectRef.current = onSelect
+  onClearRef.current = onClear
 
   useEffect(() => {
     const el = hostRef.current
@@ -35,6 +45,10 @@ export function MapView({ municipalities, selected, onSelect, visible = true }: 
 
     L.control.zoom({ position: 'topright' }).addTo(map)
     const group = L.layerGroup().addTo(map)
+
+    map.on('click', () => {
+      onClearRef.current?.()
+    })
 
     mapRef.current = map
     layerRef.current = group
@@ -94,7 +108,10 @@ export function MapView({ municipalities, selected, onSelect, visible = true }: 
         opacity: 1,
         className: 'mun-tip',
       })
-      marker.on('click', () => onSelectRef.current(m.name))
+      marker.on('click', (e) => {
+        L.DomEvent.stopPropagation(e)
+        onSelectRef.current(m.name)
+      })
       marker.addTo(group)
       bounds.push([m.lat, m.lon])
     }
