@@ -439,12 +439,7 @@ export default function App() {
             ref={temporalRef}
           >
             <div className="report-page">
-              <TemporalidadeView
-                rows={data.rows}
-                municipalities={munOpts}
-                municipio={filters.municipio}
-                onMunicipio={(v) => setFilter('municipio', v)}
-              />
+              <TemporalidadeView rows={data.rows} municipalities={munOpts} />
             </div>
           </div>
         ) : null}
