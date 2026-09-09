@@ -27,7 +27,10 @@ export function TemporalidadeView({ rows, municipalities }: Props) {
 
       <TemporalAcumulado rows={rows} municipalities={municipalities} />
 
-      <TemporalIntencaoPresidente rows={rows} municipalities={municipalities} />
+      <div className="temporal-intencao-row">
+        <TemporalIntencaoPresidente rows={rows} municipalities={municipalities} />
+        <TemporalIntencaoGovernadorPlaceholder />
+      </div>
     </div>
   )
 }
@@ -168,7 +171,7 @@ function TemporalIntencaoPresidente({
   }, [days])
 
   return (
-    <section className="temporal-group temporal-acumulado temporal-intencao-pres">
+    <section className="temporal-group temporal-acumulado temporal-intencao-card">
       <h3>Intenção de voto — presidente</h3>
       <p className="temporal-acumulado-lede">
         Cinco principais candidatos na estimulada a presidente, com linha de
@@ -209,9 +212,9 @@ function TemporalIntencaoPresidente({
               ))}
             </div>
 
-            <CandidateCumChart series={series} />
+            <CandidateCumChart series={series} compact />
 
-            <div className="table-scroll acum-table">
+            <div className="table-scroll acum-table acum-table-compact">
               <table>
                 <thead>
                   <tr>
@@ -276,19 +279,49 @@ type CandSeries = {
   points: CandPoint[]
 }
 
-function CandidateCumChart({ series }: { series: CandSeries[] }) {
+function TemporalIntencaoGovernadorPlaceholder() {
+  return (
+    <section className="temporal-group temporal-acumulado temporal-intencao-card temporal-intencao-placeholder">
+      <h3>Intenção de voto — governador</h3>
+      <p className="temporal-acumulado-lede">
+        Em breve: acumulado por candidato a governador, no mesmo formato do card
+        de presidente.
+      </p>
+      <article className="temporal-mini temporal-placeholder-body">
+        <div className="acum-hero">
+          <p className="temporal-total-label">Total acumulado da pesquisa</p>
+          <p className="temporal-total-value temporal-total-muted">—</p>
+          <p className="temporal-n temporal-n-card">Aguardando dados</p>
+        </div>
+        <div className="temporal-placeholder-chart" aria-hidden="true">
+          <p>Gráfico e tabela de governador virão aqui.</p>
+        </div>
+      </article>
+    </section>
+  )
+}
+
+function CandidateCumChart({
+  series,
+  compact = false,
+}: {
+  series: CandSeries[]
+  compact?: boolean
+}) {
   if (!series.length || !series[0]?.points.length) return null
 
-  const pad = { top: 28, right: 24, bottom: 44, left: 52 }
-  const width = 720
-  const height = 300
+  const pad = compact
+    ? { top: 24, right: 16, bottom: 40, left: 40 }
+    : { top: 28, right: 24, bottom: 44, left: 52 }
+  const width = compact ? 520 : 720
+  const height = compact ? 240 : 300
   const innerW = width - pad.left - pad.right
   const innerH = height - pad.top - pad.bottom
   const xs = series[0].points.map((p) => p.x)
   const maxY = Math.max(1, ...series.flatMap((s) => s.points.map((p) => p.acumulado)))
   const yMax = Math.ceil(maxY / 50) * 50 || 50
   /** Separação mínima entre pontos no mesmo dia (evita empilhar os menores). */
-  const minGap = 18
+  const minGap = compact ? 14 : 18
   const yLo = pad.top + 14
   const yHi = pad.top + innerH - 6
 
@@ -378,7 +411,7 @@ function CandidateCumChart({ series }: { series: CandSeries[] }) {
                 d={d}
                 fill="none"
                 stroke={s.color}
-                strokeWidth="2.75"
+                strokeWidth="2.5"
                 strokeLinejoin="round"
                 strokeLinecap="round"
               />
@@ -387,7 +420,7 @@ function CandidateCumChart({ series }: { series: CandSeries[] }) {
                   <circle
                     cx={xPos(i)}
                     cy={displayY[si][i]}
-                    r="5"
+                    r="4.5"
                     fill={s.color}
                     stroke="#fff"
                     strokeWidth="1.75"
@@ -399,7 +432,7 @@ function CandidateCumChart({ series }: { series: CandSeries[] }) {
                   </circle>
                   <text
                     x={xPos(i)}
-                    y={displayY[si][i] - 10}
+                    y={displayY[si][i] - 9}
                     className="line-point-value"
                     textAnchor="middle"
                     fill={s.color}
