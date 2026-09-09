@@ -379,7 +379,7 @@ function CandidateCumChart({
     for (const it of items) displayY[it.si][day] = it.y
   }
 
-  /** Rank no dia (0 = menor) para alternar acima/abaixo. */
+  /** Rank no dia (0 = menor) — define se o valor vai acima ou abaixo do ponto. */
   const rankAtDay: number[][] = xs.map((_, day) => {
     const order = series
       .map((s, si) => ({ si, v: s.points[day]?.acumulado ?? 0 }))
@@ -392,20 +392,13 @@ function CandidateCumChart({
   })
 
   function labelPlacement(si: number, day: number, cx: number, cy: number) {
-    const last = xs.length - 1
-    if (day === 0) {
-      return { x: cx - 8, y: cy + 3, anchor: 'end' as const }
+    const rank = rankAtDay[day][si]
+    const isBottom = rank === 0
+    // Topo e meio: valor sempre acima. Só o mais baixo fica abaixo.
+    if (isBottom) {
+      return { x: cx, y: cy + 13, anchor: 'middle' as const }
     }
-    if (day === last) {
-      return { x: cx + 8, y: cy + 3, anchor: 'start' as const }
-    }
-    // dias do meio: ímpares acima, pares abaixo — longe da linha
-    const above = rankAtDay[day][si] % 2 === 1
-    return {
-      x: cx,
-      y: above ? cy - 11 : cy + 14,
-      anchor: 'middle' as const,
-    }
+    return { x: cx, y: cy - 10, anchor: 'middle' as const }
   }
 
   return (
