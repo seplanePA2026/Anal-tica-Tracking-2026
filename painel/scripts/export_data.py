@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[2]
-SOURCE = ROOT / "BD Pesquisa_Estadual_Bahia_26_.xlsx"
+SOURCE = ROOT / "BD Pesquisa_Estadual_Bahia_26_oficial.xlsx"
 OUT = Path(__file__).resolve().parents[1] / "public" / "data.json"
 
 EXCLUDE = {
@@ -161,11 +161,16 @@ def main() -> None:
     sheet_map: list[tuple[str, str]] = []
     sheets_raw = pd.ExcelFile(SOURCE).sheet_names
     for sheet in sheets_raw:
+        # Folha auxiliar de registros fora da base oficial.
+        if sheet.strip().lower() == "excluido":
+            continue
         df = strip_frame(pd.read_excel(SOURCE, sheet_name=sheet, dtype=object))
         label = folha_label(sheet)
         sheet_map.append((sheet, label))
         df["__folha"] = label
         frames.append(df)
+    if not frames:
+        raise SystemExit("Nenhuma folha válida encontrada na planilha oficial.")
     raw = pd.concat(frames, ignore_index=True)
 
     keep = [c for c in raw.columns if c not in EXCLUDE]
@@ -227,8 +232,9 @@ def main() -> None:
             "excludedFields": sorted(EXCLUDE),
             "missingInSource": missing_in_source,
             "notes": [
-                "Base regenerada a partir de BD Pesquisa_Estadual_Bahia_26_.xlsx.",
+                "Base definitiva regenerada a partir de BD Pesquisa_Estadual_Bahia_26_oficial.xlsx.",
                 "Valores copiados da planilha sem alteração, interpolação ou exclusão de entrevistas.",
+                "A folha 'excluido' da planilha oficial não entra na visualização.",
                 "Campos do pesquisador e dados pessoais do entrevistado não entram na visualização.",
                 "Coordenadas do mapa são a mediana do GPS válido de cada município (excluídos pares 0,0).",
                 "Nomes de município, categorias e textos de resposta são os da planilha.",

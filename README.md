@@ -34,9 +34,10 @@ Worker: `analitica-tracking`
 
 ## Dados
 
-- Base atual: `BD Pesquisa_Estadual_Bahia_26_.xlsx` (campo 6, 7 e 8 de setembro de 2026).
+- Base definitiva: `BD Pesquisa_Estadual_Bahia_26_oficial.xlsx` (campo 6, 7 e 8 de setembro de 2026).
 - Microdados publicados: `painel/public/data.json` (gerado a partir da planilha, sem PII de pesquisador).
 - A planilha Excel **não** vai no GitHub.
+- A folha `excluido` da planilha oficial não entra no JSON.
 - Regenerar JSON (local, com a planilha na pasta pai):
 
 ```bash
