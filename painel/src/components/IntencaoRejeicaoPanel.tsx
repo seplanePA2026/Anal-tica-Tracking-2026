@@ -159,9 +159,9 @@ function IRDayChart({
 }) {
   if (!points.length) return null
 
-  const pad = { top: 28, right: 10, bottom: 48, left: 28 }
+  const pad = { top: 30, right: 10, bottom: 50, left: 28 }
   const width = 320
-  const height = 168
+  const height = 176
   const innerW = width - pad.left - pad.right
   const innerH = height - pad.top - pad.bottom
   const maxY = Math.max(
@@ -172,6 +172,8 @@ function IRDayChart({
     ]),
   )
   const yMax = Math.min(100, Math.ceil(maxY / 5) * 5 || 10)
+  /** Distância mínima em px entre intenção e rejeição (ponto + textos). */
+  const minGap = 36
 
   const xPos = (i: number) => {
     if (points.length <= 1) return pad.left + innerW / 2
@@ -179,14 +181,42 @@ function IRDayChart({
   }
   const yPos = (pct: number) => pad.top + innerH - (pct / yMax) * innerH
 
-  const intentionPath = points
-    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${xPos(i)} ${yPos(p.intentionPct)}`)
+  const separated = points.map((p) => {
+    let yi = yPos(p.intentionPct)
+    let yr = hasRejection ? yPos(p.rejectionPct ?? 0) : yi
+    if (hasRejection) {
+      const gap = Math.abs(yi - yr)
+      if (gap < minGap) {
+        const mid = (yi + yr) / 2
+        const half = minGap / 2
+        // Menor Y = mais alto no SVG. Quem tem maior % fica acima.
+        if (p.intentionPct >= (p.rejectionPct ?? 0)) {
+          yi = mid - half
+          yr = mid + half
+        } else {
+          yi = mid + half
+          yr = mid - half
+        }
+      }
+      // Mantém dentro da área útil.
+      yi = Math.min(pad.top + innerH - 4, Math.max(pad.top + 4, yi))
+      yr = Math.min(pad.top + innerH - 4, Math.max(pad.top + 4, yr))
+      if (Math.abs(yi - yr) < minGap) {
+        if (yi <= yr) {
+          yr = Math.min(pad.top + innerH - 4, yi + minGap)
+        } else {
+          yi = Math.min(pad.top + innerH - 4, yr + minGap)
+        }
+      }
+    }
+    return { ...p, yi, yr }
+  })
+
+  const intentionPath = separated
+    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${xPos(i)} ${p.yi}`)
     .join(' ')
-  const rejectionPath = points
-    .map(
-      (p, i) =>
-        `${i === 0 ? 'M' : 'L'} ${xPos(i)} ${yPos(p.rejectionPct ?? 0)}`,
-    )
+  const rejectionPath = separated
+    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${xPos(i)} ${p.yr}`)
     .join(' ')
 
   return (
@@ -239,11 +269,11 @@ function IRDayChart({
           />
         ) : null}
 
-        {points.map((p, i) => (
+        {separated.map((p, i) => (
           <g key={p.x}>
             <circle
               cx={xPos(i)}
-              cy={yPos(p.intentionPct)}
+              cy={p.yi}
               r="4.5"
               fill="#2e7d32"
               stroke="#fff"
@@ -256,7 +286,7 @@ function IRDayChart({
             </circle>
             <text
               x={xPos(i)}
-              y={yPos(p.intentionPct) - 18}
+              y={p.yi - 16}
               className="ir-day-n"
               textAnchor="middle"
               fill="#2e7d32"
@@ -265,7 +295,7 @@ function IRDayChart({
             </text>
             <text
               x={xPos(i)}
-              y={yPos(p.intentionPct) - 7}
+              y={p.yi - 5}
               className="ir-day-pct"
               textAnchor="middle"
               fill="#2e7d32"
@@ -277,7 +307,7 @@ function IRDayChart({
               <>
                 <circle
                   cx={xPos(i)}
-                  cy={yPos(p.rejectionPct ?? 0)}
+                  cy={p.yr}
                   r="4.5"
                   fill="#e53935"
                   stroke="#fff"
@@ -290,7 +320,7 @@ function IRDayChart({
                 </circle>
                 <text
                   x={xPos(i)}
-                  y={yPos(p.rejectionPct ?? 0) + 14}
+                  y={p.yr + 14}
                   className="ir-day-n"
                   textAnchor="middle"
                   fill="#e53935"
@@ -299,7 +329,7 @@ function IRDayChart({
                 </text>
                 <text
                   x={xPos(i)}
-                  y={yPos(p.rejectionPct ?? 0) + 25}
+                  y={p.yr + 25}
                   className="ir-day-pct"
                   textAnchor="middle"
                   fill="#e53935"
