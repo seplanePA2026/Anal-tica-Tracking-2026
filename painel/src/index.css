@@ -2058,6 +2058,71 @@ tr.is-sel {
   color: var(--accent);
 }
 
+.acum-hero {
+  margin: 4px 0 16px;
+}
+
+.acum-day-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 0 16px;
+}
+
+.acum-day-card {
+  background: #f7f5fc;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.acum-day-label {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.acum-day-n {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1.1;
+}
+
+.acum-day-meta {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.acum-chart {
+  margin: 8px 0 14px;
+}
+
+.acum-bar {
+  fill: #c4b5fd;
+}
+
+.acum-cum-label {
+  fill: #7C4DFF;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.acum-table {
+  margin-top: 4px;
+}
+
+@media (max-width: 720px) {
+  .acum-day-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .line-chart-wrap {
   width: 100%;
 }
