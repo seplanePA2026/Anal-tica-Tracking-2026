@@ -3,6 +3,7 @@ import { fieldHeading, TEMPORAL_SECTIONS } from '../labels'
 import { colorFor, formatN, formatPctNum } from '../stats'
 import { RESEARCH_WAVES, questionEvolution, temporalPoints } from '../temporal'
 import { ALL, type Row } from '../types'
+import { IntencaoRejeicaoPanel } from './IntencaoRejeicaoPanel'
 
 type Props = {
   rows: Row[]
@@ -18,6 +19,8 @@ export function TemporalidadeView({ rows, municipalities }: Props) {
         <p className="kicker">Temporalidade</p>
         <h2>{wave?.label ?? 'Evolução'}</h2>
       </header>
+
+      <IntencaoRejeicaoPanel rows={rows} municipalities={municipalities} />
 
       <div className="temporal-grid">
         {TEMPORAL_SECTIONS.map((g) => (
