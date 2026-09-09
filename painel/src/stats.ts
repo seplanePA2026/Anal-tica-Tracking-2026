@@ -379,6 +379,9 @@ export function colorFor(label: string): string {
   const known: Record<string, string> = {
     'Lula (PT)': '#E53935',
     'Flávio Bolsonaro (PL)': '#1E88E5',
+    'Augusto Cury (AVANTE)': '#8E24AA',
+    'Ronaldo Caiado (UNIÃO BRASIL)': '#039BE5',
+    'Renan Santos (MISSÃO)': '#6D4C41',
     'Jerônimo Rodrigues (PT)': '#C62828',
     'Jerônimo Rodrigues': '#C62828',
     'ACM Neto (UNIÃO BRASIL)': '#1565C0',
