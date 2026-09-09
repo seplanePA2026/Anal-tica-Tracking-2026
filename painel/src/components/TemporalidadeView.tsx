@@ -101,6 +101,17 @@ function TemporalAcumulado({
     return rows.filter((r) => r['Municípios'] === municipio)
   }, [rows, municipio])
 
+  const totalSeries = useMemo(
+    () => [
+      {
+        label: municipio === ALL ? 'Total da pesquisa' : `Total em ${municipio}`,
+        color: '#7C4DFF',
+        points: [{ x: 'Acumulado', value: scoped.length }],
+      },
+    ],
+    [municipio, scoped.length],
+  )
+
   return (
     <section className="temporal-group temporal-acumulado">
       <h3>Acumulado da pesquisa</h3>
@@ -118,13 +129,11 @@ function TemporalAcumulado({
         </div>
 
         <div className="temporal-total-card">
-          <p className="temporal-total-label">
-            {municipio === ALL ? 'Total da pesquisa' : `Total em ${municipio}`}
-          </p>
-          <p className="temporal-total-value">{formatN(scoped.length)}</p>
+          <p className="temporal-total-label">{totalSeries[0].label}</p>
           <p className="temporal-n temporal-n-card">
             entrevistas consolidadas dos 3 dias
           </p>
+          <CountLineChart series={totalSeries} />
         </div>
       </article>
     </section>
@@ -269,5 +278,101 @@ function ChartBody({
         ? 'Selecione duas opções de resposta para comparar.'
         : 'Sem entrevistas neste recorte.'}
     </p>
+  )
+}
+
+type CountSeries = {
+  label: string
+  color: string
+  points: { x: string; value: number }[]
+}
+
+function CountLineChart({ series, height = 240 }: { series: CountSeries[]; height?: number }) {
+  const pad = { top: 20, right: 16, bottom: 36, left: 52 }
+  const width = 720
+  const innerW = width - pad.left - pad.right
+  const innerH = height - pad.top - pad.bottom
+  const xs = series[0]?.points.map((p) => p.x) ?? []
+  const maxY = Math.max(1, ...series.flatMap((s) => s.points.map((p) => p.value)))
+  const yMax = maxY <= 10 ? 10 : Math.ceil(maxY / 100) * 100
+
+  const xPos = (i: number) => {
+    if (xs.length <= 1) return pad.left + innerW / 2
+    return pad.left + (i / (xs.length - 1)) * innerW
+  }
+  const yPos = (value: number) => pad.top + innerH - (value / yMax) * innerH
+  const gridYs = [0, 0.25, 0.5, 0.75, 1].map((t) => t * yMax)
+
+  return (
+    <div className="line-chart-wrap">
+      <svg
+        className="line-chart"
+        viewBox={`0 0 ${width} ${height}`}
+        role="img"
+        aria-label="Gráfico do total acumulado"
+      >
+        {gridYs.map((g) => (
+          <g key={g}>
+            <line
+              x1={pad.left}
+              x2={pad.left + innerW}
+              y1={yPos(g)}
+              y2={yPos(g)}
+              className="line-grid"
+            />
+            <text x={pad.left - 8} y={yPos(g) + 3} className="line-axis" textAnchor="end">
+              {formatN(Math.round(g))}
+            </text>
+          </g>
+        ))}
+
+        {xs.map((label, i) => (
+          <text key={label} x={xPos(i)} y={height - 10} className="line-axis" textAnchor="middle">
+            {label}
+          </text>
+        ))}
+
+        {series.map((s) => {
+          const d = s.points
+            .map((p, i) => `${i === 0 ? 'M' : 'L'} ${xPos(i)} ${yPos(p.value)}`)
+            .join(' ')
+          return (
+            <g key={s.label}>
+              <path
+                d={d}
+                fill="none"
+                stroke={s.color}
+                strokeWidth="3.25"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+              {s.points.map((p, i) => (
+                <circle
+                  key={`${s.label}-${p.x}`}
+                  cx={xPos(i)}
+                  cy={yPos(p.value)}
+                  r="6"
+                  fill={s.color}
+                  stroke="#fff"
+                  strokeWidth="2"
+                >
+                  <title>
+                    {s.label}: {formatN(p.value)} entrevistas
+                  </title>
+                </circle>
+              ))}
+            </g>
+          )
+        })}
+      </svg>
+      <ul className="line-legend">
+        {series.map((s) => (
+          <li key={s.label}>
+            <span className="line-swatch" style={{ background: s.color }} />
+            {s.label}: {formatN(s.points[0]?.value ?? 0)}
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
