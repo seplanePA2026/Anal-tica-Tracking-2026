@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { fieldHeading, QUESTION_SEQUENCE } from '../labels'
+import { fieldColumn, fieldHeading, QUESTION_SEQUENCE } from '../labels'
 import { exportTablesExcel, exportTablesPdf } from '../export/exportTables'
 import { formatN } from '../stats'
 import type { Dataset, Row } from '../types'
