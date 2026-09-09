@@ -337,3 +337,32 @@ export const QUESTION_SEQUENCE = QUESTION_SECTIONS.flatMap((g) => g.keys)
 export const RESEARCH_SECTIONS = QUESTION_SECTIONS.filter((g) => g.id !== 'perfil')
 
 export const RESEARCH_SEQUENCE = RESEARCH_SECTIONS.flatMap((g) => g.keys)
+
+/** Temporalidade: só intenção de voto e rejeição. */
+export const TEMPORAL_SECTIONS: { id: string; title: string; keys: string[] }[] = [
+  {
+    id: 'presidente',
+    title: 'Intenção e rejeição à Presidência da República',
+    keys: ['ESTIMULADA PRESIDENTE', 'ESTIMULADA REJEIÇÃO PRESIDENTE cdd'],
+  },
+  {
+    id: 'governador',
+    title: 'Intenção de voto ao Governo da Bahia',
+    keys: [
+      'ESPONTÂNEA GOVERNADOR',
+      'ESTIMULADA GOVERNADOR',
+      'JEROXACM com apoios',
+    ],
+  },
+  {
+    id: 'senado',
+    title: 'Intenção e rejeição ao Senado pela Bahia',
+    keys: [
+      'ESTIMULADA SENADOR 1ª OPÇÃO',
+      'ESTIMULADA SENADOR  2ª OPÇÃO',
+      'REJEIÇÃO SENADOR',
+    ],
+  },
+]
+
+export const TEMPORAL_SEQUENCE = TEMPORAL_SECTIONS.flatMap((g) => g.keys)

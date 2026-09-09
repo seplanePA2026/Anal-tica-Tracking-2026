@@ -1877,6 +1877,24 @@ tr.is-sel {
   flex: 0 0 auto;
 }
 
+.temporal-acumulado {
+  margin-top: 28px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.temporal-acumulado-lede {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+  max-width: 52rem;
+}
+
+.temporal-acumulado-card .bars {
+  margin-top: 4px;
+}
+
 .line-chart-wrap {
   width: 100%;
 }

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import { fieldHeading, RESEARCH_SECTIONS } from '../labels'
-import { colorFor, formatN } from '../stats'
+import { fieldHeading, TEMPORAL_SECTIONS, TEMPORAL_SEQUENCE } from '../labels'
+import { colorFor, countBy, formatN, formatPctNum } from '../stats'
 import { RESEARCH_WAVES, questionEvolution, temporalPoints } from '../temporal'
 import { ALL, type Row } from '../types'
 import { LineChart } from './LineChart'
@@ -21,7 +21,7 @@ export function TemporalidadeView({ rows, municipalities }: Props) {
       </header>
 
       <div className="temporal-grid">
-        {RESEARCH_SECTIONS.map((g) => (
+        {TEMPORAL_SECTIONS.map((g) => (
           <section key={g.id} className="temporal-group">
             <h3>{g.title}</h3>
             {g.keys.map((key) => (
@@ -35,6 +35,8 @@ export function TemporalidadeView({ rows, municipalities }: Props) {
           </section>
         ))}
       </div>
+
+      <TemporalAcumulado rows={rows} municipalities={municipalities} />
     </div>
   )
 }
@@ -161,6 +163,90 @@ function TemporalQuestionCard({ fieldKey, rows, municipalities }: CardProps) {
             : 'Sem entrevistas neste recorte.'}
         </p>
       )}
+    </article>
+  )
+}
+
+function TemporalAcumulado({
+  rows,
+  municipalities,
+}: {
+  rows: Row[]
+  municipalities: string[]
+}) {
+  const [municipio, setMunicipio] = useState(ALL)
+
+  const scoped = useMemo(() => {
+    if (municipio === ALL) return rows
+    return rows.filter((r) => r['Municípios'] === municipio)
+  }, [rows, municipio])
+
+  return (
+    <section className="temporal-group temporal-acumulado">
+      <h3>Acumulado da pesquisa</h3>
+      <p className="temporal-acumulado-lede">
+        Resultado único dos três dias de campo (06.09, 07.09 e 08.09), sem separar
+        por dia.
+      </p>
+
+      <div className="temporal-card-filters">
+        <label className="flt">
+          Município
+          <select value={municipio} onChange={(e) => setMunicipio(e.target.value)}>
+            <option value={ALL}>Bahia (todos)</option>
+            {municipalities.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <p className="temporal-n temporal-n-card">
+        {formatN(scoped.length)} entrevistas no acumulado
+        {municipio === ALL ? '' : ` · ${municipio}`}
+      </p>
+
+      {!scoped.length ? (
+        <p className="empty-filter">Sem entrevistas neste recorte.</p>
+      ) : (
+        TEMPORAL_SEQUENCE.map((key) => (
+          <AcumuladoBlock key={key} fieldKey={key} rows={scoped} />
+        ))
+      )}
+    </section>
+  )
+}
+
+function AcumuladoBlock({ fieldKey, rows }: { fieldKey: string; rows: Row[] }) {
+  const dist = useMemo(() => countBy(rows, fieldKey), [rows, fieldKey])
+  const maxN = dist.rows.reduce((m, r) => Math.max(m, r.n), 0) || 1
+
+  return (
+    <article className="temporal-mini temporal-acumulado-card">
+      <h4 className="temporal-mini-title">{fieldHeading(fieldKey)}</h4>
+      <div className="bars">
+        {dist.rows.map((r) => (
+          <div className="bar-row" key={r.label}>
+            <div className="bar-label" title={r.label}>
+              {r.label}
+            </div>
+            <div className="bar-track">
+              <div
+                className="bar-fill"
+                style={{
+                  width: `${(r.n / maxN) * 100}%`,
+                  background: colorFor(r.label),
+                }}
+              />
+            </div>
+            <div className="bar-n">{formatN(r.n)}</div>
+            <div className="bar-pct">{formatPctNum(r.pct)}</div>
+          </div>
+        ))}
+      </div>
+      <p className="temporal-n temporal-n-card">Total: {formatN(dist.total)}</p>
     </article>
   )
 }
