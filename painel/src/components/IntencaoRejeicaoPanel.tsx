@@ -159,7 +159,7 @@ function IRDayChart({
 }) {
   if (!points.length) return null
 
-  const pad = { top: 22, right: 52, bottom: 36, left: 52 }
+  const pad = { top: 22, right: 52, bottom: 36, left: 40 }
   const width = 340
   const height = 168
   const innerW = width - pad.left - pad.right
@@ -226,23 +226,14 @@ function IRDayChart({
         {[0, 0.5, 1].map((t) => {
           const g = t * yMax
           return (
-            <g key={g}>
-              <line
-                x1={pad.left}
-                x2={pad.left + innerW}
-                y1={yPos(g)}
-                y2={yPos(g)}
-                className="line-grid"
-              />
-              <text
-                x={pad.left - 4}
-                y={yPos(g) + 3}
-                className="line-axis"
-                textAnchor="end"
-              >
-                {Math.round(g)}%
-              </text>
-            </g>
+            <line
+              key={g}
+              x1={pad.left}
+              x2={pad.left + innerW}
+              y1={yPos(g)}
+              y2={yPos(g)}
+              className="line-grid"
+            />
           )
         })}
 

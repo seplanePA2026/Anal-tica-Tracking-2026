@@ -810,6 +810,10 @@ button, select { font-family: inherit; }
   color: var(--accent);
 }
 .q-head h3 { font-size: 16px; line-height: 1.35; }
+.q-skip-note {
+  font-weight: 500;
+  color: #b0b6c3;
+}
 .q-head p, .score-line { margin: 0 0 10px; font-size: 13px; color: var(--muted); }
 
 .bars { display: grid; gap: 6px; margin: 8px 0 16px; }

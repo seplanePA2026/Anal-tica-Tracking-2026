@@ -6,6 +6,7 @@ import {
   countBy,
   formatN,
   formatPctNum,
+  hasEmptyAnswers,
   leading,
   meanScore,
   share,
@@ -138,8 +139,11 @@ export async function generateReportPdf(rows: Row[], scopeLabel: string) {
 
     for (const key of group.keys) {
       await yieldFrame()
-      const dist = countBy(rows, key)
-      const heading = fieldHeading(key)
+      const skipPattern = hasEmptyAnswers(rows, key)
+      const dist = countBy(rows, key, { excludeEmpty: skipPattern })
+      const heading = skipPattern
+        ? `${fieldHeading(key)} (SOMENTE PARA QUEM DECLAROU INTENÇÃO DE VOTO)`
+        : fieldHeading(key)
       const titleLines = doc.splitTextToSize(heading, width) as string[]
       const score = key === 'nota Jerônimo' ? meanScore(rows, key) : null
       const barH = 5.2

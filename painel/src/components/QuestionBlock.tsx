@@ -1,10 +1,12 @@
 import { useMemo } from 'react'
 import { fieldHeading } from '../labels'
 import {
+  answeredRows,
   colorFor,
   countBy,
   formatN,
   formatPctNum,
+  hasEmptyAnswers,
   meanScore,
 } from '../stats'
 import type { Row } from '../types'
@@ -15,15 +17,31 @@ type Props = {
   rows: Row[]
 }
 
+const SKIP_NOTE = '(SOMENTE PARA QUEM DECLAROU INTENÇÃO DE VOTO)'
+
 export function QuestionBlock({ fieldKey, rows }: Props) {
-  const dist = useMemo(() => countBy(rows, fieldKey), [rows, fieldKey])
+  const skipPattern = useMemo(
+    () => hasEmptyAnswers(rows, fieldKey),
+    [rows, fieldKey],
+  )
+  const dist = useMemo(
+    () => countBy(rows, fieldKey, { excludeEmpty: skipPattern }),
+    [rows, fieldKey, skipPattern],
+  )
+  const crossRows = useMemo(
+    () => (skipPattern ? answeredRows(rows, fieldKey) : rows),
+    [rows, fieldKey, skipPattern],
+  )
   const maxN = dist.rows.reduce((m, r) => Math.max(m, r.n), 0) || 1
   const score = fieldKey === 'nota Jerônimo' ? meanScore(rows, fieldKey) : null
 
   return (
     <section className="q-block" id={`q-${slug(fieldKey)}`}>
       <header className="q-head">
-        <h3>{fieldHeading(fieldKey)}</h3>
+        <h3>
+          {fieldHeading(fieldKey)}
+          {skipPattern ? <span className="q-skip-note"> {SKIP_NOTE}</span> : null}
+        </h3>
       </header>
 
       {score && score.n > 0 ? (
@@ -88,7 +106,7 @@ export function QuestionBlock({ fieldKey, rows }: Props) {
         </table>
       </div>
 
-      <CrossTabPanel fieldKey={fieldKey} rows={rows} />
+      <CrossTabPanel fieldKey={fieldKey} rows={crossRows} />
     </section>
   )
 }

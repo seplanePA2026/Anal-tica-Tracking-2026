@@ -127,13 +127,32 @@ export function sortLabels(labels: string[], key?: string): string[] {
 
 export type CountRow = { label: string; n: number; pct: number }
 
-export function countBy(rows: Row[], key: string): { total: number; rows: CountRow[] } {
-  const total = rows.length
+export function hasEmptyAnswers(rows: Row[], key: string): boolean {
+  return rows.some((r) => norm(r[key]) === EMPTY)
+}
+
+/** Linhas com resposta efetiva (exclui células vazias → "(sem resposta)"). */
+export function answeredRows(rows: Row[], key: string): Row[] {
+  return rows.filter((r) => norm(r[key]) !== EMPTY)
+}
+
+export function countBy(
+  rows: Row[],
+  key: string,
+  opts?: { excludeEmpty?: boolean },
+): { total: number; rows: CountRow[]; skippedEmpty: number } {
+  const excludeEmpty = Boolean(opts?.excludeEmpty)
   const map = new Map<string, number>()
+  let skippedEmpty = 0
   for (const r of rows) {
     const k = norm(r[key])
+    if (excludeEmpty && k === EMPTY) {
+      skippedEmpty += 1
+      continue
+    }
     map.set(k, (map.get(k) || 0) + 1)
   }
+  const total = [...map.values()].reduce((s, n) => s + n, 0)
   const labels = [...map.keys()]
   const pref = ORDERS[key]
   labels.sort((a, b) => {
@@ -155,6 +174,7 @@ export function countBy(rows: Row[], key: string): { total: number; rows: CountR
   })
   return {
     total,
+    skippedEmpty,
     rows: labels.map((label) => {
       const n = map.get(label) || 0
       return { label, n, pct: total ? (n / total) * 100 : 0 }
