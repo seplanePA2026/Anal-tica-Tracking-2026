@@ -1891,8 +1891,15 @@ tr.is-sel {
   max-width: 52rem;
 }
 
-.temporal-acumulado-card .bars {
-  margin-top: 4px;
+.temporal-acumulado .temporal-q {
+  flex: 1 1 280px;
+  min-width: min(100%, 240px);
+  max-width: none;
+}
+
+.temporal-acumulado .temporal-q select {
+  width: 100%;
+  max-width: none;
 }
 
 .line-chart-wrap {

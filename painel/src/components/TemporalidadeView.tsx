@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { fieldHeading, TEMPORAL_SECTIONS, TEMPORAL_SEQUENCE } from '../labels'
-import { colorFor, countBy, formatN, formatPctNum } from '../stats'
+import { colorFor, formatN } from '../stats'
 import { RESEARCH_WAVES, questionEvolution, temporalPoints } from '../temporal'
 import { ALL, type Row } from '../types'
 import { LineChart } from './LineChart'
@@ -57,8 +57,129 @@ function TemporalQuestionCard({ fieldKey, rows, municipalities }: CardProps) {
   }, [rows, municipio])
 
   const points = useMemo(() => temporalPoints(scoped), [scoped])
+  const chart = useCompareChart(points, fieldKey, selected, setSelected)
+
+  return (
+    <article className="temporal-mini">
+      <h4 className="temporal-mini-title">{fieldHeading(fieldKey)}</h4>
+
+      <div className="temporal-card-filters">
+        <MunicipioFilter
+          value={municipio}
+          onChange={setMunicipio}
+          municipalities={municipalities}
+        />
+        <CompareFilter
+          optionLabels={chart.optionLabels}
+          pick={chart.pick}
+          summaryLabel={chart.summaryLabel}
+          onToggle={chart.toggleOption}
+        />
+      </div>
+
+      <p className="temporal-n temporal-n-card">
+        {formatN(scoped.length)} entrevistas · {points.length}{' '}
+        {points.length === 1 ? 'ponto' : 'pontos'}
+      </p>
+
+      <ChartBody scopedLen={scoped.length} series={chart.series} />
+    </article>
+  )
+}
+
+function TemporalAcumulado({
+  rows,
+  municipalities,
+}: {
+  rows: Row[]
+  municipalities: string[]
+}) {
+  const [municipio, setMunicipio] = useState(ALL)
+  const [question, setQuestion] = useState(TEMPORAL_SEQUENCE[0] ?? '')
+  const [selected, setSelected] = useState<string[] | null>(null)
+
+  const scoped = useMemo(() => {
+    if (municipio === ALL) return rows
+    return rows.filter((r) => r['Municípios'] === municipio)
+  }, [rows, municipio])
+
+  const points = useMemo(
+    () => [
+      {
+        id: 'acumulado',
+        label: 'Acumulado',
+        rows: scoped,
+      },
+    ],
+    [scoped],
+  )
+
+  const chart = useCompareChart(points, question, selected, setSelected)
+
+  return (
+    <section className="temporal-group temporal-acumulado">
+      <h3>Acumulado da pesquisa</h3>
+      <p className="temporal-acumulado-lede">
+        Um único ponto com o total dos três dias de campo (06.09, 07.09 e 08.09).
+      </p>
+
+      <article className="temporal-mini">
+        <div className="temporal-card-filters">
+          <MunicipioFilter
+            value={municipio}
+            onChange={(v) => {
+              setMunicipio(v)
+              setSelected(null)
+            }}
+            municipalities={municipalities}
+          />
+          <label className="flt temporal-q">
+            Pergunta
+            <select
+              value={question}
+              onChange={(e) => {
+                setQuestion(e.target.value)
+                setSelected(null)
+              }}
+            >
+              {TEMPORAL_SECTIONS.map((g) => (
+                <optgroup key={g.id} label={g.title}>
+                  {g.keys.map((key) => (
+                    <option key={key} value={key}>
+                      {fieldHeading(key)}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </label>
+          <CompareFilter
+            optionLabels={chart.optionLabels}
+            pick={chart.pick}
+            summaryLabel={chart.summaryLabel}
+            onToggle={chart.toggleOption}
+          />
+        </div>
+
+        <p className="temporal-n temporal-n-card">
+          {formatN(scoped.length)} entrevistas · 1 ponto
+          {municipio === ALL ? '' : ` · ${municipio}`}
+        </p>
+
+        <ChartBody scopedLen={scoped.length} series={chart.series} height={240} />
+      </article>
+    </section>
+  )
+}
+
+function useCompareChart(
+  points: { id: string; label: string; rows: Row[] }[],
+  fieldKey: string,
+  selected: string[] | null,
+  setSelected: (v: string[] | null | ((prev: string[] | null) => string[] | null)) => void,
+) {
   const allSeries = useMemo(
-    () => questionEvolution(points, fieldKey, colorFor),
+    () => (fieldKey ? questionEvolution(points, fieldKey, colorFor) : []),
     [points, fieldKey],
   )
   const optionLabels = useMemo(() => allSeries.map((s) => s.label), [allSeries])
@@ -101,152 +222,93 @@ function TemporalQuestionCard({ fieldKey, rows, municipalities }: CardProps) {
       ? `${pick[0]} × ${pick[1]}`
       : pick[0] ?? 'Selecione 2 opções'
 
-  return (
-    <article className="temporal-mini">
-      <h4 className="temporal-mini-title">{fieldHeading(fieldKey)}</h4>
-
-      <div className="temporal-card-filters">
-        <label className="flt">
-          Município
-          <select value={municipio} onChange={(e) => setMunicipio(e.target.value)}>
-            <option value={ALL}>Bahia (todos)</option>
-            {municipalities.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        {optionLabels.length ? (
-          <details className="flt temporal-opt-panel">
-            <summary>
-              Comparar
-              <span className="temporal-opt-summary">{summaryLabel}</span>
-            </summary>
-            <div className="temporal-opt-list" role="group" aria-label="Opções de resposta">
-              <p className="temporal-opt-hint">Selecione 2 opções para o gráfico</p>
-              {optionLabels.map((label) => {
-                const on = pick.includes(label)
-                return (
-                  <button
-                    key={label}
-                    type="button"
-                    className={`temporal-opt-row${on ? ' on' : ''}`}
-                    onClick={() => toggleOption(label)}
-                  >
-                    <span
-                      className="temporal-opt-dot"
-                      style={{ background: on ? colorFor(label) : '#c5bfd4' }}
-                    />
-                    <span className="temporal-opt-label">{label}</span>
-                    {on ? <span className="temporal-opt-check">✓</span> : null}
-                  </button>
-                )
-              })}
-            </div>
-          </details>
-        ) : null}
-      </div>
-
-      <p className="temporal-n temporal-n-card">
-        {formatN(scoped.length)} entrevistas · {points.length}{' '}
-        {points.length === 1 ? 'ponto' : 'pontos'}
-      </p>
-
-      {scoped.length && series.length ? (
-        <LineChart series={series} height={200} />
-      ) : (
-        <p className="empty-filter">
-          {scoped.length
-            ? 'Selecione duas opções de resposta para comparar.'
-            : 'Sem entrevistas neste recorte.'}
-        </p>
-      )}
-    </article>
-  )
+  return { optionLabels, pick, series, summaryLabel, toggleOption }
 }
 
-function TemporalAcumulado({
-  rows,
+function MunicipioFilter({
+  value,
+  onChange,
   municipalities,
 }: {
-  rows: Row[]
+  value: string
+  onChange: (v: string) => void
   municipalities: string[]
 }) {
-  const [municipio, setMunicipio] = useState(ALL)
-
-  const scoped = useMemo(() => {
-    if (municipio === ALL) return rows
-    return rows.filter((r) => r['Municípios'] === municipio)
-  }, [rows, municipio])
-
   return (
-    <section className="temporal-group temporal-acumulado">
-      <h3>Acumulado da pesquisa</h3>
-      <p className="temporal-acumulado-lede">
-        Resultado único dos três dias de campo (06.09, 07.09 e 08.09), sem separar
-        por dia.
-      </p>
-
-      <div className="temporal-card-filters">
-        <label className="flt">
-          Município
-          <select value={municipio} onChange={(e) => setMunicipio(e.target.value)}>
-            <option value={ALL}>Bahia (todos)</option>
-            {municipalities.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      <p className="temporal-n temporal-n-card">
-        {formatN(scoped.length)} entrevistas no acumulado
-        {municipio === ALL ? '' : ` · ${municipio}`}
-      </p>
-
-      {!scoped.length ? (
-        <p className="empty-filter">Sem entrevistas neste recorte.</p>
-      ) : (
-        TEMPORAL_SEQUENCE.map((key) => (
-          <AcumuladoBlock key={key} fieldKey={key} rows={scoped} />
-        ))
-      )}
-    </section>
+    <label className="flt">
+      Município
+      <select value={value} onChange={(e) => onChange(e.target.value)}>
+        <option value={ALL}>Bahia (todos)</option>
+        {municipalities.map((name) => (
+          <option key={name} value={name}>
+            {name}
+          </option>
+        ))}
+      </select>
+    </label>
   )
 }
 
-function AcumuladoBlock({ fieldKey, rows }: { fieldKey: string; rows: Row[] }) {
-  const dist = useMemo(() => countBy(rows, fieldKey), [rows, fieldKey])
-  const maxN = dist.rows.reduce((m, r) => Math.max(m, r.n), 0) || 1
-
+function CompareFilter({
+  optionLabels,
+  pick,
+  summaryLabel,
+  onToggle,
+}: {
+  optionLabels: string[]
+  pick: string[]
+  summaryLabel: string
+  onToggle: (label: string) => void
+}) {
+  if (!optionLabels.length) return null
   return (
-    <article className="temporal-mini temporal-acumulado-card">
-      <h4 className="temporal-mini-title">{fieldHeading(fieldKey)}</h4>
-      <div className="bars">
-        {dist.rows.map((r) => (
-          <div className="bar-row" key={r.label}>
-            <div className="bar-label" title={r.label}>
-              {r.label}
-            </div>
-            <div className="bar-track">
-              <div
-                className="bar-fill"
-                style={{
-                  width: `${(r.n / maxN) * 100}%`,
-                  background: colorFor(r.label),
-                }}
+    <details className="flt temporal-opt-panel">
+      <summary>
+        Comparar
+        <span className="temporal-opt-summary">{summaryLabel}</span>
+      </summary>
+      <div className="temporal-opt-list" role="group" aria-label="Opções de resposta">
+        <p className="temporal-opt-hint">Selecione 2 opções para o gráfico</p>
+        {optionLabels.map((label) => {
+          const on = pick.includes(label)
+          return (
+            <button
+              key={label}
+              type="button"
+              className={`temporal-opt-row${on ? ' on' : ''}`}
+              onClick={() => onToggle(label)}
+            >
+              <span
+                className="temporal-opt-dot"
+                style={{ background: on ? colorFor(label) : '#c5bfd4' }}
               />
-            </div>
-            <div className="bar-n">{formatN(r.n)}</div>
-            <div className="bar-pct">{formatPctNum(r.pct)}</div>
-          </div>
-        ))}
+              <span className="temporal-opt-label">{label}</span>
+              {on ? <span className="temporal-opt-check">✓</span> : null}
+            </button>
+          )
+        })}
       </div>
-      <p className="temporal-n temporal-n-card">Total: {formatN(dist.total)}</p>
-    </article>
+    </details>
+  )
+}
+
+function ChartBody({
+  scopedLen,
+  series,
+  height = 200,
+}: {
+  scopedLen: number
+  series: { label: string; color: string; points: { x: string; pct: number }[] }[]
+  height?: number
+}) {
+  if (scopedLen && series.length) {
+    return <LineChart series={series} height={height} />
+  }
+  return (
+    <p className="empty-filter">
+      {scopedLen
+        ? 'Selecione duas opções de resposta para comparar.'
+        : 'Sem entrevistas neste recorte.'}
+    </p>
   )
 }
