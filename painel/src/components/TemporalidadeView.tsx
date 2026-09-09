@@ -194,7 +194,7 @@ function PulseLineChart({ series }: { series: PulseSeries[] }) {
     [series],
   )
 
-  const rowH = 44
+  const rowH = 52
   const pad = { top: 12, right: 24, bottom: 28, left: 168 }
   const width = 720
   const height = pad.top + pad.bottom + Math.max(1, ranked.length) * rowH
@@ -271,13 +271,22 @@ function PulseLineChart({ series }: { series: PulseSeries[] }) {
                     strokeWidth="2.25"
                   >
                     <title>
-                      {s.label}: {formatPctNum(p.pct)} ({formatN(p.n)})
+                      {s.label}: {formatN(p.n)} · {formatPctNum(p.pct)}
                     </title>
                   </circle>
                   <text
                     x={xPos(i)}
-                    y={cy + 20}
+                    y={cy + 18}
                     className="line-point-value"
+                    textAnchor="middle"
+                    fill={s.color}
+                  >
+                    {formatN(p.n)}
+                  </text>
+                  <text
+                    x={xPos(i)}
+                    y={cy + 32}
+                    className="line-point-pct"
                     textAnchor="middle"
                     fill={s.color}
                   >
