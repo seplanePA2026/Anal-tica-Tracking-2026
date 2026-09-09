@@ -198,15 +198,14 @@ export function candidateIntentionRejection(
     }
   }
 
-  // Só mostra rejeição nos cards de governador que têm o campo "conhece e não vota".
+  // Governador: só Jerônimo, ACM Neto e Mansur (quem tem "conhece e não vota").
   if (race.rejectionKnowFields?.length) {
-    for (const c of out) {
-      c.hasRejection = findKnowField(race, c.name) != null
-      if (!c.hasRejection) {
-        c.rejectionN = null
-        c.rejectionPct = null
-      }
+    const kept = out.filter((c) => findKnowField(race, c.name) != null)
+    for (const c of kept) {
+      c.hasRejection = true
     }
+    out.length = 0
+    out.push(...kept)
   }
 
   out.sort(
