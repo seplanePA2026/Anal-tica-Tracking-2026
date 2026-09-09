@@ -69,14 +69,23 @@ export function LineChart({ series, height = 260 }: Props) {
             .join(' ')
           return (
             <g key={s.label}>
-              <path d={d} fill="none" stroke={s.color} strokeWidth="2.5" strokeLinejoin="round" />
+              <path
+                d={d}
+                fill="none"
+                stroke={s.color}
+                strokeWidth="3.25"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
               {s.points.map((p, i) => (
                 <circle
                   key={`${s.label}-${p.x}`}
                   cx={xPos(i)}
                   cy={yPos(p.pct)}
-                  r="4"
+                  r="5.5"
                   fill={s.color}
+                  stroke="#fff"
+                  strokeWidth="2"
                 >
                   <title>
                     {s.label}: {p.pct.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%
