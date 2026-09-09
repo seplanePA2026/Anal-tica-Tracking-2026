@@ -159,9 +159,9 @@ function IRDayChart({
 }) {
   if (!points.length) return null
 
-  const pad = { top: 30, right: 10, bottom: 50, left: 28 }
-  const width = 320
-  const height = 176
+  const pad = { top: 22, right: 52, bottom: 36, left: 52 }
+  const width = 340
+  const height = 168
   const innerW = width - pad.left - pad.right
   const innerH = height - pad.top - pad.bottom
   const maxY = Math.max(
@@ -172,8 +172,8 @@ function IRDayChart({
     ]),
   )
   const yMax = Math.min(100, Math.ceil(maxY / 5) * 5 || 10)
-  /** Distância mínima em px entre intenção e rejeição (ponto + textos). */
-  const minGap = 36
+  /** Distância mínima entre os pontos das duas séries. */
+  const minGap = 28
 
   const xPos = (i: number) => {
     if (points.length <= 1) return pad.left + innerW / 2
@@ -185,11 +185,9 @@ function IRDayChart({
     let yi = yPos(p.intentionPct)
     let yr = hasRejection ? yPos(p.rejectionPct ?? 0) : yi
     if (hasRejection) {
-      const gap = Math.abs(yi - yr)
-      if (gap < minGap) {
+      if (Math.abs(yi - yr) < minGap) {
         const mid = (yi + yr) / 2
         const half = minGap / 2
-        // Menor Y = mais alto no SVG. Quem tem maior % fica acima.
         if (p.intentionPct >= (p.rejectionPct ?? 0)) {
           yi = mid - half
           yr = mid + half
@@ -198,15 +196,13 @@ function IRDayChart({
           yr = mid - half
         }
       }
-      // Mantém dentro da área útil.
-      yi = Math.min(pad.top + innerH - 4, Math.max(pad.top + 4, yi))
-      yr = Math.min(pad.top + innerH - 4, Math.max(pad.top + 4, yr))
+      const lo = pad.top + 8
+      const hi = pad.top + innerH - 8
+      yi = Math.min(hi, Math.max(lo, yi))
+      yr = Math.min(hi, Math.max(lo, yr))
       if (Math.abs(yi - yr) < minGap) {
-        if (yi <= yr) {
-          yr = Math.min(pad.top + innerH - 4, yi + minGap)
-        } else {
-          yi = Math.min(pad.top + innerH - 4, yr + minGap)
-        }
+        if (yi <= yr) yr = Math.min(hi, yi + minGap)
+        else yi = Math.min(hi, yr + minGap)
       }
     }
     return { ...p, yi, yr }
@@ -269,86 +265,91 @@ function IRDayChart({
           />
         ) : null}
 
-        {separated.map((p, i) => (
-          <g key={p.x}>
-            <circle
-              cx={xPos(i)}
-              cy={p.yi}
-              r="4.5"
-              fill="#2e7d32"
-              stroke="#fff"
-              strokeWidth="1.5"
-            >
-              <title>
-                Intenção {dayLabel(p.x)}: {formatN(p.intentionN)} ·{' '}
+        {separated.map((p, i) => {
+          const cx = xPos(i)
+          return (
+            <g key={p.x}>
+              <circle
+                cx={cx}
+                cy={p.yi}
+                r="4.5"
+                fill="#2e7d32"
+                stroke="#fff"
+                strokeWidth="1.5"
+              >
+                <title>
+                  Intenção {dayLabel(p.x)}: {formatN(p.intentionN)} ·{' '}
+                  {formatPctNum(p.intentionPct)}
+                </title>
+              </circle>
+              {/* Intenção sempre à esquerda do ponto */}
+              <text
+                x={cx - 10}
+                y={p.yi - 4}
+                className="ir-day-n ir-day-halo"
+                textAnchor="end"
+                fill="#2e7d32"
+              >
+                {formatN(p.intentionN)}
+              </text>
+              <text
+                x={cx - 10}
+                y={p.yi + 8}
+                className="ir-day-pct ir-day-halo"
+                textAnchor="end"
+                fill="#2e7d32"
+              >
                 {formatPctNum(p.intentionPct)}
-              </title>
-            </circle>
-            <text
-              x={xPos(i)}
-              y={p.yi - 16}
-              className="ir-day-n"
-              textAnchor="middle"
-              fill="#2e7d32"
-            >
-              {formatN(p.intentionN)}
-            </text>
-            <text
-              x={xPos(i)}
-              y={p.yi - 5}
-              className="ir-day-pct"
-              textAnchor="middle"
-              fill="#2e7d32"
-            >
-              {formatPctNum(p.intentionPct)}
-            </text>
+              </text>
 
-            {hasRejection ? (
-              <>
-                <circle
-                  cx={xPos(i)}
-                  cy={p.yr}
-                  r="4.5"
-                  fill="#e53935"
-                  stroke="#fff"
-                  strokeWidth="1.5"
-                >
-                  <title>
-                    Rejeição {dayLabel(p.x)}: {formatN(p.rejectionN ?? 0)} ·{' '}
+              {hasRejection ? (
+                <>
+                  <circle
+                    cx={cx}
+                    cy={p.yr}
+                    r="4.5"
+                    fill="#e53935"
+                    stroke="#fff"
+                    strokeWidth="1.5"
+                  >
+                    <title>
+                      Rejeição {dayLabel(p.x)}: {formatN(p.rejectionN ?? 0)} ·{' '}
+                      {formatPctNum(p.rejectionPct ?? 0)}
+                    </title>
+                  </circle>
+                  {/* Rejeição sempre à direita do ponto */}
+                  <text
+                    x={cx + 10}
+                    y={p.yr - 4}
+                    className="ir-day-n ir-day-halo"
+                    textAnchor="start"
+                    fill="#e53935"
+                  >
+                    {formatN(p.rejectionN ?? 0)}
+                  </text>
+                  <text
+                    x={cx + 10}
+                    y={p.yr + 8}
+                    className="ir-day-pct ir-day-halo"
+                    textAnchor="start"
+                    fill="#e53935"
+                  >
                     {formatPctNum(p.rejectionPct ?? 0)}
-                  </title>
-                </circle>
-                <text
-                  x={xPos(i)}
-                  y={p.yr + 14}
-                  className="ir-day-n"
-                  textAnchor="middle"
-                  fill="#e53935"
-                >
-                  {formatN(p.rejectionN ?? 0)}
-                </text>
-                <text
-                  x={xPos(i)}
-                  y={p.yr + 25}
-                  className="ir-day-pct"
-                  textAnchor="middle"
-                  fill="#e53935"
-                >
-                  {formatPctNum(p.rejectionPct ?? 0)}
-                </text>
-              </>
-            ) : null}
+                  </text>
+                </>
+              ) : null}
 
-            <text
-              x={xPos(i)}
-              y={height - 8}
-              className="line-axis"
-              textAnchor="middle"
-            >
-              {dayLabel(p.x)}
-            </text>
-          </g>
-        ))}
+              <text
+                x={cx}
+                y={height - 8}
+                className="line-axis"
+                textAnchor="middle"
+              >
+                {dayLabel(p.x)}
+              </text>
+            </g>
+          )
+        })}
       </svg>
       <ul className="ir-day-legend">
         <li>

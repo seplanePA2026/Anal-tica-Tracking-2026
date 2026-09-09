@@ -1999,7 +1999,14 @@ tr.is-sel {
   font-size: 9px;
   font-weight: 600;
   font-family: var(--sans);
-  opacity: 0.5;
+  opacity: 0.55;
+}
+
+.ir-day-halo {
+  paint-order: stroke fill;
+  stroke: #fff;
+  stroke-width: 3px;
+  stroke-linejoin: round;
 }
 
 .ir-day-legend {
