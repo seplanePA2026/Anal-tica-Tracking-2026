@@ -110,9 +110,16 @@ export default function App() {
 
   const temporalRows = useMemo(() => (data ? data.rows : []), [data])
 
+  /** Base ativa (tracking). Folha isolada (ex.: 06.09) usa o histórico completo só para aquela visualização. */
+  const viewRows = useMemo(() => {
+    if (!data) return []
+    if (filters.folha !== ALL) return data.rows
+    return trackingRows
+  }, [data, filters.folha, trackingRows])
+
   const rows = useMemo(
-    () => applyFilters(trackingRows, filters),
-    [trackingRows, filters],
+    () => applyFilters(viewRows, filters),
+    [viewRows, filters],
   )
 
   const setFilter = useCallback(<K extends keyof Filters>(key: K, value: Filters[K]) => {
@@ -389,9 +396,10 @@ export default function App() {
             ) : null}
             <div className={`list-pane${listOpen ? ' open' : ''}`}>
               <h2>Dias de campo</h2>
-              {trackingFolhas.map((sheet) => {
+              {data.meta.sheets.map((sheet) => {
                 const n = data.meta.nPorFolha[sheet]
                 const active = filters.folha === sheet
+                const inTracking = trackingFolhas.includes(sheet)
                 return (
                   <button
                     type="button"
@@ -403,7 +411,10 @@ export default function App() {
                     }}
                   >
                     <strong>Folha {sheet}</strong>
-                    <span>{formatN(n)} entrevistas na planilha</span>
+                    <span>
+                      {formatN(n)} entrevistas na planilha
+                      {inTracking ? '' : ' · só visualização'}
+                    </span>
                   </button>
                 )
               })}
