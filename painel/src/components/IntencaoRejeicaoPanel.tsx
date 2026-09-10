@@ -30,8 +30,8 @@ export function IntencaoRejeicaoPanel({ rows, municipalities }: Props) {
     <section className="temporal-group ir-panel">
       <h3>Intenção × rejeição por candidato</h3>
       <p className="temporal-acumulado-lede">
-        Resultado unificado dos três dias de campo. Intenção em verde e rejeição em
-        vermelho, com evolução diária em cada card.
+        Resultado unificado de todos os dias de campo na Temporalidade. Intenção
+        em verde e rejeição em vermelho, com evolução diária em cada card.
       </p>
 
       <div className="temporal-card-filters">

@@ -19,7 +19,11 @@ export type Dataset = {
     sourceFile: string
     sheets: string[]
     sheetsRaw?: string[]
+    /** Folhas da janela tracking ativa (últimos N dias). */
+    trackingFolhas?: string[]
+    trackingWindow?: number
     n: number
+    nTemporal?: number
     nPorFolha: Record<string, number>
     excludedFields: string[]
     missingInSource: string[]
@@ -27,6 +31,7 @@ export type Dataset = {
   }
   groups: FieldGroup[]
   municipalities: Municipality[]
+  /** Todas as folhas (inclui dias só da Temporalidade). */
   rows: Row[]
 }
 

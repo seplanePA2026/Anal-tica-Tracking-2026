@@ -1,7 +1,7 @@
 import type { Row } from './types'
 import { countBy } from './stats'
 
-/** Ondas de pesquisa. Hoje há só o Tracking Bahia 1 (dias 6–8 unificados). */
+/** Ondas de pesquisa. Tracking Bahia: evolução por dia de campo. */
 export type ResearchWave = {
   id: string
   label: string

@@ -16,6 +16,12 @@ const SENATOR_FIELD = 'ESTIMULADA SENADOR 1ª OPÇÃO'
 
 export function TemporalidadeView({ rows, municipalities }: Props) {
   const wave = RESEARCH_WAVES[0]
+  const dayLabels = useMemo(() => {
+    const folhas = [
+      ...new Set(rows.map((r) => r.folha).filter(Boolean) as string[]),
+    ].sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }))
+    return folhas.map((f) => f.replace(/\./g, '/')).join(', ')
+  }, [rows])
 
   return (
     <div className="temporal-page">
@@ -32,7 +38,7 @@ export function TemporalidadeView({ rows, municipalities }: Props) {
           municipalities={municipalities}
           fieldKey={PRESIDENT_FIELD}
           title="Intenção de voto — presidente"
-          lede="Cinco principais candidatos na estimulada a presidente, com linha de acumulado por candidato nos dias 06, 07 e 08."
+          lede={`Cinco principais candidatos na estimulada a presidente, com linha de acumulado por candidato nos dias ${dayLabels}.`}
           topN={5}
           compact
         />
@@ -41,7 +47,7 @@ export function TemporalidadeView({ rows, municipalities }: Props) {
           municipalities={municipalities}
           fieldKey={GOVERNOR_FIELD}
           title="Intenção de voto — governador"
-          lede="Três principais candidatos na estimulada a governador, com linha de acumulado por candidato nos dias 06, 07 e 08."
+          lede={`Três principais candidatos na estimulada a governador, com linha de acumulado por candidato nos dias ${dayLabels}.`}
           topN={3}
           compact
         />
@@ -53,7 +59,7 @@ export function TemporalidadeView({ rows, municipalities }: Props) {
           municipalities={municipalities}
           fieldKey={SENATOR_FIELD}
           title="Intenção de voto — senador"
-          lede="Seis principais candidatos na estimulada a senador (1ª opção), com linha de acumulado por candidato nos dias 06, 07 e 08."
+          lede={`Seis principais candidatos na estimulada a senador (1ª opção), com linha de acumulado por candidato nos dias ${dayLabels}.`}
           topN={6}
           compact
         />
@@ -106,8 +112,8 @@ function TemporalAcumulado({
     <section className="temporal-group temporal-acumulado temporal-intencao-card">
       <h3>Acumulado da pesquisa</h3>
       <p className="temporal-acumulado-lede">
-        Total consolidado e divisão das entrevistas por dia de campo (06, 07 e
-        08 de setembro).
+        Total consolidado e divisão das entrevistas por dia de campo na
+        Temporalidade (inclui dias que já saíram da janela tracking ativa).
       </p>
 
       <article className="temporal-mini">

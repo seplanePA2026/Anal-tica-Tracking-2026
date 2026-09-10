@@ -95,9 +95,24 @@ export default function App() {
       .catch((e: Error) => setError(e.message))
   }, [])
 
+  const trackingFolhas = useMemo(() => {
+    if (!data) return [] as string[]
+    if (data.meta.trackingFolhas?.length) return data.meta.trackingFolhas
+    return data.meta.sheets
+  }, [data])
+
+  const trackingRows = useMemo(() => {
+    if (!data) return []
+    const set = new Set(trackingFolhas)
+    if (!set.size) return data.rows
+    return data.rows.filter((r) => r.folha != null && set.has(r.folha))
+  }, [data, trackingFolhas])
+
+  const temporalRows = useMemo(() => (data ? data.rows : []), [data])
+
   const rows = useMemo(
-    () => (data ? applyFilters(data.rows, filters) : []),
-    [data, filters],
+    () => applyFilters(trackingRows, filters),
+    [trackingRows, filters],
   )
 
   const setFilter = useCallback(<K extends keyof Filters>(key: K, value: Filters[K]) => {
@@ -133,15 +148,23 @@ export default function App() {
   }, [filters])
 
   const munRows = useMemo(() => {
-    if (!data) return []
-    if (filters.municipio === ALL) return data.rows
-    return data.rows.filter((r) => r['Municípios'] === filters.municipio)
-  }, [data, filters.municipio])
+    if (filters.municipio === ALL) return trackingRows
+    return trackingRows.filter((r) => r['Municípios'] === filters.municipio)
+  }, [trackingRows, filters.municipio])
 
   const mapMunicipalities = useMemo(() => {
     if (!data) return []
     return data.municipalities
   }, [data])
+
+  const temporalMunOpts = useMemo(() => {
+    const set = new Set<string>()
+    for (const r of temporalRows) {
+      const m = r['Municípios']
+      if (m) set.add(m)
+    }
+    return [...set].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  }, [temporalRows])
 
   if (error) {
     return (
@@ -276,25 +299,25 @@ export default function App() {
                   label="Sexo"
                   value={filters.sexo}
                   onChange={(v) => setFilter('sexo', v)}
-                  options={uniqueValues(data.rows, 'sexo').filter((x) => x !== EMPTY)}
+                  options={uniqueValues(trackingRows, 'sexo').filter((x) => x !== EMPTY)}
                 />
                 <Select
                   label="Escolaridade"
                   value={filters.escolaridade}
                   onChange={(v) => setFilter('escolaridade', v)}
-                  options={uniqueValues(data.rows, 'ESCOLARIDADE')}
+                  options={uniqueValues(trackingRows, 'ESCOLARIDADE')}
                 />
                 <Select
                   label="Religião"
                   value={filters.religiao}
                   onChange={(v) => setFilter('religiao', v)}
-                  options={uniqueValues(data.rows, 'religião')}
+                  options={uniqueValues(trackingRows, 'religião')}
                 />
                 <Select
                   label="Renda"
                   value={filters.renda}
                   onChange={(v) => setFilter('renda', v)}
-                  options={uniqueValues(data.rows, 'renda familiar')}
+                  options={uniqueValues(trackingRows, 'renda familiar')}
                 />
               </>
             ) : null}
@@ -366,7 +389,7 @@ export default function App() {
             ) : null}
             <div className={`list-pane${listOpen ? ' open' : ''}`}>
               <h2>Dias de campo</h2>
-              {data.meta.sheets.map((sheet) => {
+              {trackingFolhas.map((sheet) => {
                 const n = data.meta.nPorFolha[sheet]
                 const active = filters.folha === sheet
                 return (
@@ -447,7 +470,7 @@ export default function App() {
             ref={temporalRef}
           >
             <div className="report-page">
-              <TemporalidadeView rows={data.rows} municipalities={munOpts} />
+              <TemporalidadeView rows={temporalRows} municipalities={temporalMunOpts} />
             </div>
           </div>
         ) : null}
@@ -456,7 +479,7 @@ export default function App() {
         <GenerateReportModal
           municipalities={munOpts}
           defaultMunicipio={filters.municipio}
-          allRows={data.rows}
+          allRows={trackingRows}
           onClose={() => setPdfOpen(false)}
         />
       ) : null}
