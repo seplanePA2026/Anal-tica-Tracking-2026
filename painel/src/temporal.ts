@@ -58,6 +58,47 @@ export function temporalPoints(allRows: Row[], waves = RESEARCH_WAVES): TimePoin
   }))
 }
 
+/**
+ * Pontos do eixo em Intenção × rejeição:
+ * unifica 06+07+08 num único ponto e cada dia seguinte (09, …) como ponto próprio.
+ */
+export const IR_BASE_FOLHAS = ['06.09', '07.09', '08.09'] as const
+
+export function temporalIrPoints(allRows: Row[]): TimePoint[] {
+  const folhas = [...new Set(allRows.map((r) => r.folha).filter(Boolean) as string[])]
+  folhas.sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }))
+  if (!folhas.length) {
+    return [{ id: 'unica', label: 'Pesquisa', rows: allRows }]
+  }
+
+  const baseSet = new Set<string>(IR_BASE_FOLHAS)
+  const baseFolhas = folhas.filter((f) => baseSet.has(f))
+  const laterFolhas = folhas.filter((f) => !baseSet.has(f))
+  const points: TimePoint[] = []
+
+  if (baseFolhas.length) {
+    const label =
+      baseFolhas.length === 1
+        ? baseFolhas[0].replace(/\./g, '/')
+        : `${baseFolhas[0].replace(/\./g, '/')}–${baseFolhas[baseFolhas.length - 1].replace(/\./g, '/')}`
+    points.push({
+      id: `base-${baseFolhas.join('-')}`,
+      label,
+      rows: allRows.filter((r) => r.folha != null && baseSet.has(r.folha)),
+    })
+  }
+
+  for (const folha of laterFolhas) {
+    points.push({
+      id: folha,
+      label: folha.replace(/\./g, '/'),
+      rows: allRows.filter((r) => r.folha === folha),
+    })
+  }
+
+  return points
+}
+
 export type LineSeries = {
   label: string
   color: string

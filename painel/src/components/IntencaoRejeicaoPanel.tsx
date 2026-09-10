@@ -8,7 +8,7 @@ import {
   type IntentionRejectionRace,
 } from '../intencaoRejeicao'
 import { formatN, formatPctNum } from '../stats'
-import { temporalPoints } from '../temporal'
+import { temporalIrPoints } from '../temporal'
 import { ALL, type Row } from '../types'
 
 type Props = {
@@ -24,14 +24,14 @@ export function IntencaoRejeicaoPanel({ rows, municipalities }: Props) {
     return rows.filter((r) => r['Municípios'] === municipio)
   }, [rows, municipio])
 
-  const days = useMemo(() => temporalPoints(scoped), [scoped])
+  const days = useMemo(() => temporalIrPoints(scoped), [scoped])
 
   return (
     <section className="temporal-group ir-panel">
       <h3>Intenção × rejeição por candidato</h3>
       <p className="temporal-acumulado-lede">
-        Resultado unificado de todos os dias de campo na Temporalidade. Intenção
-        em verde e rejeição em vermelho, com evolução diária em cada card.
+        Barras: resultado unificado de todos os dias. Linha: bloco 06–08/09 como
+        um ponto e o dia 09/09 como o seguinte, ligados pela evolução.
       </p>
 
       <div className="temporal-card-filters">
@@ -50,7 +50,7 @@ export function IntencaoRejeicaoPanel({ rows, municipalities }: Props) {
 
       <p className="temporal-n temporal-n-card">
         {formatN(scoped.length)} entrevistas · {days.length}{' '}
-        {days.length === 1 ? 'dia' : 'dias'}
+        {days.length === 1 ? 'ponto' : 'pontos'} no tempo
         {municipio === ALL ? '' : ` · ${municipio}`}
       </p>
 
