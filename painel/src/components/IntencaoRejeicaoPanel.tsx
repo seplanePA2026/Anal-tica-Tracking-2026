@@ -31,7 +31,7 @@ export function IntencaoRejeicaoPanel({ rows, municipalities }: Props) {
       <h3>Intenção × rejeição por candidato</h3>
       <p className="temporal-acumulado-lede">
         Barras: resultado unificado de todos os dias. Linha: bloco 06–08/09 como
-        um ponto e o dia 09/09 como o seguinte, ligados pela evolução.
+        um ponto e cada dia seguinte (09/09, 10/09, …) como ponto próprio.
       </p>
 
       <div className="temporal-card-filters">
