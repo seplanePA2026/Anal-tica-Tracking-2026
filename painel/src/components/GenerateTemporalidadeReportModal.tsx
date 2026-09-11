@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   candidateIntentionRejection,
@@ -74,6 +74,14 @@ export function GenerateTemporalidadeReportModal({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [])
+
   const allMuns = munSel.size === municipalities.length && municipalities.length > 0
   const scoped = useMemo(() => {
     if (allMuns) return rows
@@ -99,17 +107,6 @@ export function GenerateTemporalidadeReportModal({
   const nCand = catalogs.reduce((s, c) => s + (candSel[c.id]?.size ?? 0), 0)
   const nCandTotal = catalogs.reduce((s, c) => s + c.names.length, 0)
   const sectionsOn = Object.values(include).filter(Boolean).length
-  const sectionTitles = (
-    [
-      ['acumulado', 'Acumulado'],
-      ['intencaoRejeicao', 'Intenção × rejeição'],
-      ['presidente', 'Presidente'],
-      ['governador', 'Governador'],
-      ['senador', 'Senador'],
-    ] as const
-  )
-    .filter(([key]) => include[key])
-    .map(([, title]) => title)
 
   const generate = async () => {
     if (!munSel.size) {
@@ -156,6 +153,7 @@ export function GenerateTemporalidadeReportModal({
       <div
         className="pdf-builder"
         role="dialog"
+        aria-modal="true"
         aria-labelledby="tmp-pdf-title"
         onClick={(e) => e.stopPropagation()}
       >
@@ -163,18 +161,14 @@ export function GenerateTemporalidadeReportModal({
           <div>
             <p className="kicker">Construtor de PDF</p>
             <h2 id="tmp-pdf-title">Relatório de Temporalidade</h2>
-            <p className="pdf-builder-lede">
-              Monte o recorte com municípios, candidatos e seções. O PDF usa a
-              base completa da Temporalidade (todos os dias de campo), não só a
-              janela tracking ativa.
-            </p>
             <div className="pdf-builder-pills">
-              <span>{formatN(rows.length)} entrevistas</span>
+              <span>{formatN(scoped.length)} entrevistas</span>
               <span>
-                {dayLabels.length} {dayLabels.length === 1 ? 'dia' : 'dias'}:{' '}
-                {dayLabels.join(' · ') || '—'}
+                {dayLabels.length} {dayLabels.length === 1 ? 'dia' : 'dias'}
               </span>
-              <span>{municipalities.length} municípios</span>
+              <span>
+                {munSel.size}/{municipalities.length} mun.
+              </span>
             </div>
           </div>
           <button
@@ -188,276 +182,206 @@ export function GenerateTemporalidadeReportModal({
           </button>
         </header>
 
-        <ol className="pdf-builder-steps" aria-label="Etapas do construtor">
-          <li className={munSel.size ? 'done' : ''}>
-            <span>1</span> Municípios
-          </li>
-          <li className={nCand ? 'done' : ''}>
-            <span>2</span> Candidatos
-          </li>
-          <li className={sectionsOn ? 'done' : ''}>
-            <span>3</span> Seções
-          </li>
-        </ol>
+        <div className="pdf-builder-stack">
+          <section className="pdf-panel">
+            <div className="pdf-panel-head">
+              <h3>1. Municípios</h3>
+              <span className="pdf-builder-count">
+                {munSel.size}/{municipalities.length}
+              </span>
+            </div>
+            <div className="pdf-builder-toolbar">
+              <input
+                type="search"
+                className="pdf-builder-search"
+                placeholder="Buscar município"
+                value={munQuery}
+                onChange={(e) => setMunQuery(e.target.value)}
+                disabled={busy}
+              />
+              <button
+                type="button"
+                className="pdf-chip-btn"
+                disabled={busy}
+                onClick={() => setMunSel(new Set(municipalities))}
+              >
+                Todos
+              </button>
+              <button
+                type="button"
+                className="pdf-chip-btn"
+                disabled={busy}
+                onClick={() => setMunSel(new Set())}
+              >
+                Nenhum
+              </button>
+            </div>
+            <ul className="pdf-panel-scroll pdf-check-list">
+              {munHits.map((name) => {
+                const n = nByMun.get(name) ?? 0
+                const on = munSel.has(name)
+                return (
+                  <li key={name}>
+                    <label className={`pdf-check${on ? ' on' : ''}`}>
+                      <input
+                        type="checkbox"
+                        checked={on}
+                        disabled={busy}
+                        onChange={() =>
+                          setMunSel((prev) => toggleInSet(prev, name))
+                        }
+                      />
+                      <span className="pdf-check-name">{name}</span>
+                      <span className="pdf-check-n">{formatN(n)}</span>
+                    </label>
+                  </li>
+                )
+              })}
+              {!munHits.length ? (
+                <li className="pdf-builder-empty">Nenhum município com esse nome.</li>
+              ) : null}
+            </ul>
+          </section>
 
-        <div className="pdf-builder-body">
-          <div className="pdf-builder-grid">
-            <section className="pdf-builder-col">
-              <div className="pdf-builder-block">
-                <div className="pdf-builder-block-head">
-                  <h3>1. Municípios</h3>
-                  <span className="pdf-builder-count">
-                    {munSel.size}/{municipalities.length}
-                  </span>
-                </div>
-                <div className="pdf-builder-toolbar">
-                  <input
-                    type="search"
-                    className="pdf-builder-search"
-                    placeholder="Buscar município"
-                    value={munQuery}
-                    onChange={(e) => setMunQuery(e.target.value)}
-                    disabled={busy}
-                  />
-                  <button
-                    type="button"
-                    className="pdf-chip-btn"
-                    disabled={busy}
-                    onClick={() => setMunSel(new Set(municipalities))}
-                  >
-                    Todos
-                  </button>
-                  <button
-                    type="button"
-                    className="pdf-chip-btn"
-                    disabled={busy}
-                    onClick={() => setMunSel(new Set())}
-                  >
-                    Nenhum
-                  </button>
-                </div>
-                <ul className="pdf-check-list">
-                  {munHits.map((name) => {
-                    const n = nByMun.get(name) ?? 0
-                    const on = munSel.has(name)
-                    return (
-                      <li key={name}>
-                        <label className={`pdf-check${on ? ' on' : ''}`}>
-                          <input
-                            type="checkbox"
-                            checked={on}
-                            disabled={busy}
-                            onChange={() =>
-                              setMunSel((prev) => toggleInSet(prev, name))
-                            }
-                          />
-                          <span className="pdf-check-name">{name}</span>
-                          <span className="pdf-check-n">{formatN(n)}</span>
-                        </label>
-                      </li>
-                    )
-                  })}
-                  {!munHits.length ? (
-                    <li className="pdf-builder-empty">Nenhum município com esse nome.</li>
-                  ) : null}
-                </ul>
-              </div>
-            </section>
-
-            <section className="pdf-builder-col">
-              <div className="pdf-builder-block">
-                <div className="pdf-builder-block-head">
-                  <h3>2. Candidatos</h3>
-                  <span className="pdf-builder-count">
-                    {nCand}/{nCandTotal}
-                  </span>
-                </div>
-                <div className="pdf-builder-toolbar">
-                  <input
-                    type="search"
-                    className="pdf-builder-search"
-                    placeholder="Buscar candidato"
-                    value={candQuery}
-                    onChange={(e) => setCandQuery(e.target.value)}
-                    disabled={busy}
-                  />
-                  <button
-                    type="button"
-                    className="pdf-chip-btn"
-                    disabled={busy}
-                    onClick={() => {
-                      const next: Record<string, Set<string>> = {}
-                      for (const c of catalogs) next[c.id] = new Set(c.names)
-                      setCandSel(next)
-                    }}
-                  >
-                    Todos
-                  </button>
-                  <button
-                    type="button"
-                    className="pdf-chip-btn"
-                    disabled={busy}
-                    onClick={() => {
-                      const next: Record<string, Set<string>> = {}
-                      for (const c of catalogs) next[c.id] = new Set()
-                      setCandSel(next)
-                    }}
-                  >
-                    Nenhum
-                  </button>
-                </div>
-                {catalogs.map((cat) => {
-                  const q = candQuery.trim().toLowerCase()
-                  const names = q
-                    ? cat.names.filter((n) => n.toLowerCase().includes(q))
-                    : cat.names
-                  if (!names.length) return null
-                  const selected = candSel[cat.id] ?? new Set<string>()
-                  return (
-                    <div key={cat.id} className="pdf-race-block">
-                      <div className="pdf-race-head">
-                        <h4>{cat.title}</h4>
-                        <button
-                          type="button"
-                          className="pdf-chip-btn"
-                          disabled={busy}
-                          onClick={() =>
-                            setCandSel((prev) => ({
-                              ...prev,
-                              [cat.id]:
-                                selected.size === cat.names.length
-                                  ? new Set()
-                                  : new Set(cat.names),
-                            }))
-                          }
-                        >
-                          {selected.size === cat.names.length
-                            ? 'Limpar cargo'
-                            : 'Cargo todo'}
-                        </button>
-                      </div>
-                      <div className="pdf-cand-chips">
-                        {names.map((name) => {
-                          const on = selected.has(name)
-                          return (
-                            <label
-                              key={name}
-                              className={`pdf-cand-chip${on ? ' on' : ''}`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={on}
-                                disabled={busy}
-                                onChange={() =>
-                                  setCandSel((prev) => ({
-                                    ...prev,
-                                    [cat.id]: toggleInSet(
-                                      prev[cat.id] ?? new Set(),
-                                      name,
-                                    ),
-                                  }))
-                                }
-                              />
-                              {name}
-                            </label>
-                          )
-                        })}
-                      </div>
+          <section className="pdf-panel">
+            <div className="pdf-panel-head">
+              <h3>2. Candidatos</h3>
+              <span className="pdf-builder-count">
+                {nCand}/{nCandTotal}
+              </span>
+            </div>
+            <div className="pdf-builder-toolbar">
+              <input
+                type="search"
+                className="pdf-builder-search"
+                placeholder="Buscar candidato"
+                value={candQuery}
+                onChange={(e) => setCandQuery(e.target.value)}
+                disabled={busy}
+              />
+              <button
+                type="button"
+                className="pdf-chip-btn"
+                disabled={busy}
+                onClick={() => {
+                  const next: Record<string, Set<string>> = {}
+                  for (const c of catalogs) next[c.id] = new Set(c.names)
+                  setCandSel(next)
+                }}
+              >
+                Todos
+              </button>
+              <button
+                type="button"
+                className="pdf-chip-btn"
+                disabled={busy}
+                onClick={() => {
+                  const next: Record<string, Set<string>> = {}
+                  for (const c of catalogs) next[c.id] = new Set()
+                  setCandSel(next)
+                }}
+              >
+                Nenhum
+              </button>
+            </div>
+            <div className="pdf-panel-scroll">
+              {catalogs.map((cat) => {
+                const q = candQuery.trim().toLowerCase()
+                const names = q
+                  ? cat.names.filter((n) => n.toLowerCase().includes(q))
+                  : cat.names
+                if (!names.length) return null
+                const selected = candSel[cat.id] ?? new Set<string>()
+                return (
+                  <div key={cat.id} className="pdf-race-block">
+                    <div className="pdf-race-head">
+                      <h4>{cat.title}</h4>
+                      <button
+                        type="button"
+                        className="pdf-chip-btn"
+                        disabled={busy}
+                        onClick={() =>
+                          setCandSel((prev) => ({
+                            ...prev,
+                            [cat.id]:
+                              selected.size === cat.names.length
+                                ? new Set()
+                                : new Set(cat.names),
+                          }))
+                        }
+                      >
+                        {selected.size === cat.names.length
+                          ? 'Limpar cargo'
+                          : 'Cargo todo'}
+                      </button>
                     </div>
-                  )
-                })}
-              </div>
-            </section>
-          </div>
+                    <div className="pdf-cand-chips">
+                      {names.map((name) => {
+                        const on = selected.has(name)
+                        return (
+                          <label
+                            key={name}
+                            className={`pdf-cand-chip${on ? ' on' : ''}`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={on}
+                              disabled={busy}
+                              onChange={() =>
+                                setCandSel((prev) => ({
+                                  ...prev,
+                                  [cat.id]: toggleInSet(
+                                    prev[cat.id] ?? new Set(),
+                                    name,
+                                  ),
+                                }))
+                              }
+                            />
+                            {name}
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </section>
 
-          <aside className="pdf-builder-side">
-            <section className="pdf-builder-sections">
+          <section className="pdf-panel">
+            <div className="pdf-panel-head">
               <h3>3. Seções do PDF</h3>
-              <div className="pdf-section-grid">
-                {(
-                  [
-                    [
-                      'acumulado',
-                      'Acumulado da pesquisa',
-                      'Volume e total por dia de campo',
-                    ],
-                    [
-                      'intencaoRejeicao',
-                      'Intenção × rejeição',
-                      'Tabela unificada e linha 06–08 / 09 / 10',
-                    ],
-                    [
-                      'presidente',
-                      'Acumulado presidente',
-                      'Linha de intenção dos selecionados',
-                    ],
-                    [
-                      'governador',
-                      'Acumulado governador',
-                      'Linha de intenção dos selecionados',
-                    ],
-                    [
-                      'senador',
-                      'Acumulado senador',
-                      'Linha de intenção dos selecionados',
-                    ],
-                  ] as const
-                ).map(([key, title, hint]) => (
-                  <label
-                    key={key}
-                    className={`pdf-section-card${include[key] ? ' on' : ''}`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={include[key]}
-                      disabled={busy}
-                      onChange={() =>
-                        setInclude((prev) => ({ ...prev, [key]: !prev[key] }))
-                      }
-                    />
-                    <span>
-                      <strong>{title}</strong>
-                      <em>{hint}</em>
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </section>
-
-            <section className="pdf-builder-preview">
-              <h3>Prévia do recorte</h3>
-              <dl>
-                <div>
-                  <dt>Base</dt>
-                  <dd>
-                    {allMuns
-                      ? 'Bahia — todos os municípios'
-                      : munSel.size === 1
-                        ? [...munSel][0]
-                        : `${munSel.size} municípios`}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Entrevistas</dt>
-                  <dd>{formatN(scoped.length)}</dd>
-                </div>
-                <div>
-                  <dt>Candidatos</dt>
-                  <dd>
-                    {nCand} de {nCandTotal}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Seções</dt>
-                  <dd>{sectionTitles.join(' · ') || 'Nenhuma'}</dd>
-                </div>
-                <div>
-                  <dt>Dias</dt>
-                  <dd>{dayLabels.join(' · ') || '—'}</dd>
-                </div>
-              </dl>
-            </section>
-          </aside>
+              <span className="pdf-builder-count">{sectionsOn}/5</span>
+            </div>
+            <div className="pdf-panel-scroll pdf-section-grid">
+              {(
+                [
+                  ['acumulado', 'Acumulado da pesquisa'],
+                  ['intencaoRejeicao', 'Intenção × rejeição'],
+                  ['presidente', 'Acumulado presidente'],
+                  ['governador', 'Acumulado governador'],
+                  ['senador', 'Acumulado senador'],
+                ] as const
+              ).map(([key, title]) => (
+                <label
+                  key={key}
+                  className={`pdf-section-card${include[key] ? ' on' : ''}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={include[key]}
+                    disabled={busy}
+                    onChange={() =>
+                      setInclude((prev) => ({ ...prev, [key]: !prev[key] }))
+                    }
+                  />
+                  <span>
+                    <strong>{title}</strong>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </section>
         </div>
 
         <footer className="pdf-builder-foot">
