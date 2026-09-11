@@ -31,10 +31,6 @@ export function TemporalidadeView({ rows, municipalities }: Props) {
         <div className="temporal-hero-text">
           <p className="kicker">Temporalidade</p>
           <h2>{wave?.label ?? 'Evolução'}</h2>
-          <p className="lede temporal-hero-lede">
-            Evolução por dia de campo · {dayLabels || 'sem dias'} ·{' '}
-            {formatN(rows.length)} entrevistas
-          </p>
         </div>
         <button
           type="button"
