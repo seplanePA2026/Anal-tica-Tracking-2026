@@ -20,6 +20,7 @@ import {
   formatN,
   uniqueValues,
 } from './stats'
+import { availableOndas, findOnda, rowsForFolhas } from './ondas'
 
 export default function App() {
   const [data, setData] = useState<Dataset | null>(null)
@@ -101,6 +102,11 @@ export default function App() {
     return data.meta.sheets
   }, [data])
 
+  const ondas = useMemo(
+    () => (data ? availableOndas(data.meta.sheets) : []),
+    [data],
+  )
+
   const trackingRows = useMemo(() => {
     if (!data) return []
     const set = new Set(trackingFolhas)
@@ -110,16 +116,43 @@ export default function App() {
 
   const temporalRows = useMemo(() => (data ? data.rows : []), [data])
 
+  /**
+   * Base do relatório:
+   * 1) folha isolada → só aquele dia
+   * 2) onda → dias da onda
+   * 3) padrão → janela tracking ativa (últimos 3 dias)
+   */
+  const reportBaseRows = useMemo(() => {
+    if (!data) return []
+    if (filters.folha !== ALL) {
+      return data.rows.filter((r) => r.folha === filters.folha)
+    }
+    if (filters.onda !== ALL) {
+      const onda = findOnda(filters.onda)
+      if (onda) return rowsForFolhas(data.rows, onda.folhas)
+    }
+    return trackingRows
+  }, [data, filters.folha, filters.onda, trackingRows])
+
   /** Base ativa (tracking). Folha isolada (ex.: 06.09) usa o histórico completo só para aquela visualização. */
   const viewRows = useMemo(() => {
     if (!data) return []
     if (filters.folha !== ALL) return data.rows
+    if (filters.onda !== ALL) {
+      const onda = findOnda(filters.onda)
+      if (onda) return rowsForFolhas(data.rows, onda.folhas)
+    }
     return trackingRows
-  }, [data, filters.folha, trackingRows])
+  }, [data, filters.folha, filters.onda, trackingRows])
 
   const rows = useMemo(
     () => applyFilters(viewRows, filters),
     [viewRows, filters],
+  )
+
+  const reportRows = useMemo(
+    () => applyFilters(reportBaseRows, { ...filters, folha: ALL }),
+    [reportBaseRows, filters],
   )
 
   const setFilter = useCallback(<K extends keyof Filters>(key: K, value: Filters[K]) => {
@@ -127,6 +160,8 @@ export default function App() {
       ...prev,
       [key]: value,
       ...(key === 'answerField' ? { answerValue: ALL } : {}),
+      ...(key === 'folha' && value !== ALL ? { onda: ALL } : {}),
+      ...(key === 'onda' && value !== ALL ? { folha: ALL } : {}),
     }))
   }, [])
 
@@ -148,11 +183,42 @@ export default function App() {
     const parts: string[] = []
     if (filters.municipio === ALL) parts.push('Pesquisa completa — Bahia')
     else parts.push(filters.municipio)
-    if (filters.folha !== ALL) parts.push(`folha ${filters.folha}`)
+    if (filters.folha !== ALL) parts.push(`folha ${filters.folha.replace(/\./g, '/')}`)
+    else if (filters.onda !== ALL) {
+      const onda = findOnda(filters.onda)
+      parts.push(onda ? `${onda.label} (${onda.daysLabel})` : filters.onda)
+    }
     if (filters.dia !== ALL) parts.push(filters.dia)
     if (filters.sexo !== ALL) parts.push(filters.sexo)
     return parts.join(' · ')
   }, [filters])
+
+  const reportScopeHint = useMemo(() => {
+    if (filters.folha !== ALL) {
+      return `Folha ${filters.folha.replace(/\./g, '/')}`
+    }
+    if (filters.onda !== ALL) {
+      const onda = findOnda(filters.onda)
+      return onda ? `${onda.label} · ${onda.daysLabel}` : filters.onda
+    }
+    return `Janela tracking · ${trackingFolhas.map((f) => f.replace(/\./g, '/')).join(' · ')}`
+  }, [filters.folha, filters.onda, trackingFolhas])
+
+  const selectReportFolha = useCallback((folha: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      folha,
+      ...(folha !== ALL ? { onda: ALL } : {}),
+    }))
+  }, [])
+
+  const selectReportOnda = useCallback((onda: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      onda,
+      ...(onda !== ALL ? { folha: ALL } : {}),
+    }))
+  }, [])
 
   const munRows = useMemo(() => {
     if (filters.municipio === ALL) return trackingRows
@@ -172,6 +238,9 @@ export default function App() {
     }
     return [...set].sort((a, b) => a.localeCompare(b, 'pt-BR'))
   }, [temporalRows])
+
+  const reportFilterSource = reportBaseRows
+  const demoSource = view === 'relatorio' ? reportFilterSource : trackingRows
 
   if (error) {
     return (
@@ -300,31 +369,54 @@ export default function App() {
               onChange={(v) => setFilter('municipio', v)}
               options={munOpts}
             />
+            {view === 'relatorio' ? (
+              <>
+                <Select
+                  label="Dias de campo"
+                  value={filters.folha}
+                  onChange={(v) => setFilter('folha', v)}
+                  options={data.meta.sheets}
+                  allLabel="Todas as folhas"
+                  formatOption={(sheet) => `Folha ${sheet.replace(/\./g, '/')}`}
+                />
+                <Select
+                  label="Ondas"
+                  value={filters.onda}
+                  onChange={(v) => setFilter('onda', v)}
+                  options={ondas.map((o) => o.id)}
+                  allLabel="Janela tracking (últimos 3 dias)"
+                  formatOption={(id) => {
+                    const o = ondas.find((x) => x.id === id)
+                    return o ? `${o.label} · ${o.daysLabel}` : id
+                  }}
+                />
+              </>
+            ) : null}
             {view !== 'tabela' ? (
               <>
                 <Select
                   label="Sexo"
                   value={filters.sexo}
                   onChange={(v) => setFilter('sexo', v)}
-                  options={uniqueValues(trackingRows, 'sexo').filter((x) => x !== EMPTY)}
+                  options={uniqueValues(demoSource, 'sexo').filter((x) => x !== EMPTY)}
                 />
                 <Select
                   label="Escolaridade"
                   value={filters.escolaridade}
                   onChange={(v) => setFilter('escolaridade', v)}
-                  options={uniqueValues(trackingRows, 'ESCOLARIDADE')}
+                  options={uniqueValues(demoSource, 'ESCOLARIDADE')}
                 />
                 <Select
                   label="Religião"
                   value={filters.religiao}
                   onChange={(v) => setFilter('religiao', v)}
-                  options={uniqueValues(trackingRows, 'religião')}
+                  options={uniqueValues(demoSource, 'religião')}
                 />
                 <Select
                   label="Renda"
                   value={filters.renda}
                   onChange={(v) => setFilter('renda', v)}
-                  options={uniqueValues(trackingRows, 'renda familiar')}
+                  options={uniqueValues(demoSource, 'renda familiar')}
                 />
               </>
             ) : null}
@@ -470,7 +562,17 @@ export default function App() {
             ref={reportRef}
           >
             <div className="report-page">
-              <Report rows={rows} scopeLabel={scopeLabel} />
+              <Report
+                rows={reportRows}
+                scopeLabel={scopeLabel}
+                sheets={data.meta.sheets}
+                nPorFolha={data.meta.nPorFolha}
+                ondas={ondas}
+                folha={filters.folha}
+                onda={filters.onda}
+                onSelectFolha={selectReportFolha}
+                onSelectOnda={selectReportOnda}
+              />
             </div>
           </div>
         ) : null}
@@ -490,7 +592,8 @@ export default function App() {
         <GenerateReportModal
           municipalities={munOpts}
           defaultMunicipio={filters.municipio}
-          allRows={trackingRows}
+          allRows={reportBaseRows}
+          scopeHint={reportScopeHint}
           onClose={() => setPdfOpen(false)}
         />
       ) : null}
@@ -504,12 +607,14 @@ function Select({
   onChange,
   options,
   allLabel = 'Todos',
+  formatOption,
 }: {
   label: string
   value: string
   onChange: (v: string) => void
   options: string[]
   allLabel?: string
+  formatOption?: (value: string) => string
 }) {
   return (
     <label className="flt">
@@ -518,7 +623,7 @@ function Select({
         <option value={ALL}>{allLabel}</option>
         {options.map((o) => (
           <option key={o} value={o}>
-            {o}
+            {formatOption ? formatOption(o) : o}
           </option>
         ))}
       </select>

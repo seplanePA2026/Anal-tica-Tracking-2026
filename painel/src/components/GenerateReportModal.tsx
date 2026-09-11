@@ -1,12 +1,15 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { generateReportPdf } from '../pdf/generateReport'
+import { formatN } from '../stats'
 import { ALL, type Row } from '../types'
 
 type Props = {
   municipalities: string[]
   defaultMunicipio: string
   allRows: Row[]
+  /** Ex.: "Onda 1 · 06/09 · 07/09 · 08/09" ou "Folha 10/09" */
+  scopeHint: string
   onClose: () => void
 }
 
@@ -14,6 +17,7 @@ export function GenerateReportModal({
   municipalities,
   defaultMunicipio,
   allRows,
+  scopeHint,
   onClose,
 }: Props) {
   const [municipio, setMunicipio] = useState(
@@ -27,7 +31,9 @@ export function GenerateReportModal({
       ? allRows
       : allRows.filter((r) => r['Municípios'] === municipio)
   const scope =
-    municipio === ALL ? 'Pesquisa completa — Bahia' : municipio
+    municipio === ALL
+      ? `Pesquisa completa — Bahia · ${scopeHint}`
+      : `${municipio} · ${scopeHint}`
 
   const generate = async () => {
     if (!rows.length) {
@@ -56,9 +62,14 @@ export function GenerateReportModal({
       >
         <h2 id="pdf-title">Gerar relatório</h2>
         <p className="login-lead">
-          Escolha o município. O PDF inclui todos os campos da pesquisa, com
-          gráficos, tabelas e o resultado completo.
+          O PDF inclui todos os campos da pesquisa deste recorte, com gráficos e
+          tabelas.
         </p>
+        <div className="pdf-window-chip">
+          <span className="pdf-window-chip-label">Recorte</span>
+          <strong>{scopeHint}</strong>
+          <em>{formatN(allRows.length)} entrevistas na base deste relatório</em>
+        </div>
         <label className="flt pdf-field">
           Município
           <select
@@ -74,7 +85,7 @@ export function GenerateReportModal({
             ))}
           </select>
         </label>
-        <p className="pdf-n">{rows.length} entrevistas neste recorte</p>
+        <p className="pdf-n">{formatN(rows.length)} entrevistas neste recorte</p>
         {error ? <p className="pdf-error">{error}</p> : null}
         <div className="pdf-actions">
           <button type="button" className="pdf-cancel" onClick={onClose} disabled={busy}>

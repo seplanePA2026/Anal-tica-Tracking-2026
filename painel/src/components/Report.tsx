@@ -1,48 +1,154 @@
 import { QUESTION_SECTIONS } from '../labels'
+import { formatN } from '../stats'
+import type { ResearchOnda } from '../ondas'
 import type { Row } from '../types'
+import { ALL } from '../types'
 import { KpiCards } from './KpiCards'
 import { QuestionBlock } from './QuestionBlock'
 
 type Props = {
   rows: Row[]
   scopeLabel: string
+  sheets: string[]
+  nPorFolha: Record<string, number>
+  ondas: ResearchOnda[]
+  folha: string
+  onda: string
+  onSelectFolha: (folha: string) => void
+  onSelectOnda: (onda: string) => void
 }
 
-export function Report({ rows, scopeLabel }: Props) {
-  if (!rows.length) {
-    return (
-      <p className="empty-filter">
-        Nenhum entrevistado permanece com os filtros atuais. Os totais da planilha
-        não foram alterados — apenas o recorte está vazio.
-      </p>
-    )
-  }
+function dayLabel(folha: string): string {
+  return folha.replace(/\./g, '/')
+}
 
+export function Report({
+  rows,
+  scopeLabel,
+  sheets,
+  nPorFolha,
+  ondas,
+  folha,
+  onda,
+  onSelectFolha,
+  onSelectOnda,
+}: Props) {
   return (
     <div className="report">
       <header className="report-hero">
         <p className="kicker">Relatório do recorte</p>
         <h2>{scopeLabel}</h2>
+        <p className="lede report-scope-lede">
+          {formatN(rows.length)} entrevistas neste recorte. Use os filtros abaixo
+          para ver um dia de campo ou uma onda completa.
+        </p>
       </header>
 
-      <KpiCards rows={rows} />
+      <section className="report-scope-filters" aria-label="Recorte do relatório">
+        <div className="report-scope-block">
+          <div className="report-scope-block-head">
+            <h3>Dias de campo</h3>
+            <p>Folha da pesquisa (igual à lista do desktop).</p>
+          </div>
+          <div className="report-scope-chips" role="listbox" aria-label="Dias de campo">
+            <button
+              type="button"
+              role="option"
+              aria-selected={folha === ALL}
+              className={`report-scope-chip${folha === ALL ? ' on' : ''}`}
+              onClick={() => onSelectFolha(ALL)}
+            >
+              <strong>Todas as folhas</strong>
+              <span>Usa a onda ou a janela tracking</span>
+            </button>
+            {sheets.map((sheet) => {
+              const on = folha === sheet
+              const n = nPorFolha[sheet] ?? 0
+              return (
+                <button
+                  key={sheet}
+                  type="button"
+                  role="option"
+                  aria-selected={on}
+                  className={`report-scope-chip${on ? ' on' : ''}`}
+                  onClick={() => onSelectFolha(on ? ALL : sheet)}
+                >
+                  <strong>Folha {dayLabel(sheet)}</strong>
+                  <span>{formatN(n)} entrevistas</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
 
-      <nav className="toc">
-        {QUESTION_SECTIONS.map((g) => (
-          <a key={g.id} href={`#grp-${g.id}`}>
-            {g.title}
-          </a>
-        ))}
-      </nav>
+        <div className="report-scope-block">
+          <div className="report-scope-block-head">
+            <h3>Ondas</h3>
+            <p>Acumulado de dias: Onda 1 (6–8) e Onda 2 (9–10).</p>
+          </div>
+          <div className="report-scope-chips" role="listbox" aria-label="Ondas">
+            <button
+              type="button"
+              role="option"
+              aria-selected={onda === ALL && folha === ALL}
+              className={`report-scope-chip${
+                onda === ALL && folha === ALL ? ' on' : ''
+              }`}
+              onClick={() => onSelectOnda(ALL)}
+            >
+              <strong>Janela tracking</strong>
+              <span>Últimos 3 dias ativos</span>
+            </button>
+            {ondas.map((o) => {
+              const on = folha === ALL && onda === o.id
+              const n = o.folhas.reduce((s, f) => s + (nPorFolha[f] ?? 0), 0)
+              return (
+                <button
+                  key={o.id}
+                  type="button"
+                  role="option"
+                  aria-selected={on}
+                  className={`report-scope-chip${on ? ' on' : ''}`}
+                  onClick={() => onSelectOnda(on ? ALL : o.id)}
+                >
+                  <strong>{o.label}</strong>
+                  <span>
+                    {o.daysLabel} · {formatN(n)} entrevistas
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </section>
 
-      {QUESTION_SECTIONS.map((g) => (
-        <section key={g.id} id={`grp-${g.id}`} className="group">
-          <h2>{g.title}</h2>
-          {g.keys.map((key) => (
-            <QuestionBlock key={key} fieldKey={key} rows={rows} />
+      {!rows.length ? (
+        <p className="empty-filter">
+          Nenhum entrevistado permanece com os filtros atuais. Os totais da
+          planilha não foram alterados — apenas o recorte está vazio.
+        </p>
+      ) : (
+        <>
+          <KpiCards rows={rows} />
+
+          <nav className="toc">
+            {QUESTION_SECTIONS.map((g) => (
+              <a key={g.id} href={`#grp-${g.id}`}>
+                {g.title}
+              </a>
+            ))}
+          </nav>
+
+          {QUESTION_SECTIONS.map((g) => (
+            <section key={g.id} id={`grp-${g.id}`} className="group">
+              <h2>{g.title}</h2>
+              {g.keys.map((key) => (
+                <QuestionBlock key={key} fieldKey={key} rows={rows} />
+              ))}
+            </section>
           ))}
-        </section>
-      ))}
+        </>
+      )}
     </div>
   )
 }

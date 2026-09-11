@@ -47,6 +47,8 @@ export type Filters = {
   renda: string
   enquadramento: string
   folha: string
+  /** Onda de campo (ex.: onda-1 = 06–08, onda-2 = 09–10). */
+  onda: string
   dia: string
   answerField: string
   answerValue: string
@@ -61,6 +63,7 @@ export const EMPTY_FILTERS: Filters = {
   renda: ALL,
   enquadramento: ALL,
   folha: ALL,
+  onda: ALL,
   dia: ALL,
   answerField: ALL,
   answerValue: ALL,

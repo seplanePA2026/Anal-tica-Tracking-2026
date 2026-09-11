@@ -1,0 +1,55 @@
+/** Ondas da pesquisa tracking: agrupamentos fixos de dias de campo. */
+
+export type ResearchOnda = {
+  id: string
+  label: string
+  /** Ex.: "06/09 · 07/09 · 08/09" */
+  daysLabel: string
+  folhas: string[]
+}
+
+function daySlash(folha: string): string {
+  return folha.replace(/\./g, '/')
+}
+
+/** Definição das ondas: Onda 1 = 6–8; Onda 2 = 9–10. */
+export const RESEARCH_ONDAS: ResearchOnda[] = [
+  {
+    id: 'onda-1',
+    label: 'Onda 1',
+    folhas: ['06.09', '07.09', '08.09'],
+    daysLabel: '06/09 · 07/09 · 08/09',
+  },
+  {
+    id: 'onda-2',
+    label: 'Onda 2',
+    folhas: ['09.09', '10.09'],
+    daysLabel: '09/09 · 10/09',
+  },
+]
+
+export function findOnda(id: string): ResearchOnda | undefined {
+  return RESEARCH_ONDAS.find((o) => o.id === id)
+}
+
+/** Só retorna ondas que têm pelo menos uma folha presente nos dados. */
+export function availableOndas(sheets: string[]): ResearchOnda[] {
+  const set = new Set(sheets)
+  return RESEARCH_ONDAS.map((o) => {
+    const folhas = o.folhas.filter((f) => set.has(f))
+    if (!folhas.length) return null
+    return {
+      ...o,
+      folhas,
+      daysLabel: folhas.map(daySlash).join(' · '),
+    }
+  }).filter((o): o is ResearchOnda => o != null)
+}
+
+export function rowsForFolhas<T extends { folha?: string | null }>(
+  rows: T[],
+  folhas: string[],
+): T[] {
+  const set = new Set(folhas)
+  return rows.filter((r) => r.folha != null && set.has(r.folha))
+}

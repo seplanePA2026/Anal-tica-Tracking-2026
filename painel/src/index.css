@@ -1778,6 +1778,116 @@ tr.is-sel {
   cursor: wait;
 }
 
+.pdf-window-chip {
+  display: grid;
+  gap: 4px;
+  margin: 12px 0 4px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #f5f0ff;
+  border: 1px solid rgba(124, 58, 237, 0.22);
+}
+
+.pdf-window-chip-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6d28d9;
+}
+
+.pdf-window-chip strong {
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.pdf-window-chip em {
+  font-style: normal;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.report-scope-lede {
+  margin: 0 0 4px;
+}
+
+.report-scope-filters {
+  display: grid;
+  gap: 14px;
+  margin: 0 0 20px;
+}
+
+.report-scope-block {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: 0 8px 22px rgba(28, 20, 48, 0.04);
+}
+
+.report-scope-block-head {
+  margin-bottom: 10px;
+}
+
+.report-scope-block-head h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+
+.report-scope-block-head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.report-scope-chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.report-scope-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.report-scope-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(28, 20, 48, 0.08);
+}
+
+.report-scope-chip.on {
+  border-color: rgba(124, 58, 237, 0.45);
+  background: #f4efff;
+  box-shadow: 0 10px 24px rgba(124, 58, 237, 0.12);
+}
+
+.report-scope-chip strong {
+  font-size: 13px;
+}
+
+.report-scope-chip span {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.report-scope-chip.on span {
+  color: #5b21b6;
+}
+
 .pdf-builder {
   width: min(1120px, 100%);
   max-height: min(92vh, 920px);
