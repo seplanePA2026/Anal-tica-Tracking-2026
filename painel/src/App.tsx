@@ -307,7 +307,10 @@ export default function App() {
                 className="print-btn"
                 aria-label="Gerar relatório em PDF"
                 title="Gerar relatório"
-                onClick={() => setPdfOpen(true)}
+                onClick={() => {
+                  setFiltersOpen(false)
+                  setPdfOpen(true)
+                }}
               >
                 <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
                   <path
@@ -572,6 +575,10 @@ export default function App() {
                 onda={filters.onda}
                 onSelectFolha={selectReportFolha}
                 onSelectOnda={selectReportOnda}
+                onGeneratePdf={() => {
+                  setFiltersOpen(false)
+                  setPdfOpen(true)
+                }}
               />
             </div>
           </div>

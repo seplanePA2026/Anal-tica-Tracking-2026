@@ -223,11 +223,17 @@ button, select { font-family: inherit; }
   background: #8b5cf6;
   color: #fff;
   cursor: pointer;
+  flex-shrink: 0;
   box-shadow: 0 8px 20px rgba(139, 92, 246, 0.4);
+  -webkit-tap-highlight-color: transparent;
 }
 
 .print-btn:hover {
   background: #7c3aed;
+}
+
+.print-btn:active {
+  transform: scale(0.96);
 }
 
 .user-menu-wrap {
@@ -1370,6 +1376,89 @@ tr.is-sel {
     padding: 16px 12px 28px;
   }
 
+  .report-hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .report-hero-actions h2 {
+    font-size: 18px;
+    margin: 10px 0 8px;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+
+  .report-pdf-btn {
+    width: 100%;
+    margin-top: 0;
+    justify-content: center;
+  }
+
+  .report-scope-block {
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .report-scope-chips,
+  .report-scope-chips-days,
+  .report-scope-chips-ondas {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .report-scope-chip {
+    min-height: 58px;
+    padding: 10px 11px;
+  }
+
+  .report-scope-chip:hover {
+    transform: none;
+  }
+
+  .report-scope-chip:active {
+    transform: scale(0.98);
+  }
+
+  .print-btn {
+    width: 44px;
+    height: 44px;
+    z-index: 2;
+  }
+
+  .pdf-overlay {
+    place-items: end center;
+    padding: 0;
+    background: rgba(27, 20, 48, 0.52);
+  }
+
+  .pdf-card {
+    width: 100%;
+    max-width: none;
+    max-height: min(92dvh, 100%);
+    border-radius: 22px 22px 0 0;
+    margin: 0;
+  }
+
+  .pdf-card-body {
+    padding: 20px 16px 8px;
+  }
+
+  .pdf-actions {
+    flex-direction: column-reverse;
+    padding: 12px 16px calc(16px + env(safe-area-inset-bottom));
+  }
+
+  .pdf-cancel,
+  .pdf-go {
+    width: 100%;
+    min-height: 48px;
+  }
+
+  .pdf-window-chip strong {
+    overflow-wrap: anywhere;
+  }
+
   .table-page {
     min-height: calc(100dvh - 140px);
   }
@@ -1430,6 +1519,22 @@ tr.is-sel {
   .brand-logo {
     height: 28px;
     max-width: 124px;
+  }
+
+  .report-scope-chips-days {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .report-scope-chips-ondas {
+    grid-template-columns: 1fr;
+  }
+
+  .report-scope-chip strong {
+    font-size: 12px;
+  }
+
+  .report-scope-chip span {
+    font-size: 11px;
   }
 }
 
@@ -1708,17 +1813,31 @@ tr.is-sel {
   z-index: 5000;
   display: grid;
   place-items: center;
-  padding: 20px;
+  padding: max(12px, env(safe-area-inset-top)) 12px
+    max(12px, calc(12px + env(safe-area-inset-bottom)));
   background: rgba(27, 20, 48, 0.48);
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .pdf-card {
   width: min(440px, 100%);
+  max-height: min(92dvh, 720px);
+  display: flex;
+  flex-direction: column;
   background: #fff;
   color: var(--ink);
   border-radius: 22px;
-  padding: 24px 22px 20px;
+  padding: 0;
   box-shadow: 0 24px 60px rgba(28, 20, 48, 0.28);
+  overflow: hidden;
+}
+
+.pdf-card-body {
+  padding: 22px 20px 8px;
+  overflow: auto;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
 }
 
 .pdf-card h2 {
@@ -1753,7 +1872,11 @@ tr.is-sel {
 .pdf-actions {
   display: flex;
   gap: 10px;
-  margin-top: 12px;
+  margin-top: 0;
+  padding: 12px 20px 18px;
+  border-top: 1px solid var(--line);
+  background: #fcfbfe;
+  flex-shrink: 0;
 }
 
 .pdf-cancel {
@@ -1765,11 +1888,13 @@ tr.is-sel {
   font: inherit;
   font-weight: 700;
   cursor: pointer;
+  flex: 0 0 auto;
 }
 
 .pdf-go {
   flex: 1;
-  margin-top: 0;
+  margin-top: 0 !important;
+  min-width: 0;
 }
 
 .pdf-go:disabled,
@@ -1811,6 +1936,26 @@ tr.is-sel {
   margin: 0 0 4px;
 }
 
+.report-hero-actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.report-hero-text {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.report-pdf-btn {
+  flex: 0 0 auto;
+  margin-top: 4px;
+  min-height: 44px;
+  -webkit-tap-highlight-color: transparent;
+}
+
 .report-scope-filters {
   display: grid;
   gap: 14px;
@@ -1843,8 +1988,16 @@ tr.is-sel {
 
 .report-scope-chips {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 8px;
+}
+
+.report-scope-chips-days {
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+}
+
+.report-scope-chips-ondas {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
 }
 
 .report-scope-chip {
@@ -1853,13 +2006,15 @@ tr.is-sel {
   align-items: flex-start;
   gap: 4px;
   text-align: left;
-  padding: 12px 14px;
+  min-height: 64px;
+  padding: 12px 12px;
   border-radius: 14px;
   border: 1px solid var(--line);
   background: #fff;
   color: var(--ink);
   font: inherit;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
   transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
 

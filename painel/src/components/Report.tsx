@@ -16,6 +16,7 @@ type Props = {
   onda: string
   onSelectFolha: (folha: string) => void
   onSelectOnda: (onda: string) => void
+  onGeneratePdf: () => void
 }
 
 function dayLabel(folha: string): string {
@@ -32,16 +33,27 @@ export function Report({
   onda,
   onSelectFolha,
   onSelectOnda,
+  onGeneratePdf,
 }: Props) {
   return (
     <div className="report">
-      <header className="report-hero">
-        <p className="kicker">Relatório do recorte</p>
-        <h2>{scopeLabel}</h2>
-        <p className="lede report-scope-lede">
-          {formatN(rows.length)} entrevistas neste recorte. Use os filtros abaixo
-          para ver um dia de campo ou uma onda completa.
-        </p>
+      <header className="report-hero report-hero-actions">
+        <div className="report-hero-text">
+          <p className="kicker">Relatório do recorte</p>
+          <h2>{scopeLabel}</h2>
+          <p className="lede report-scope-lede">
+            {formatN(rows.length)} entrevistas neste recorte. Escolha o dia ou a
+            onda e gere o PDF.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="tables-export-btn tables-export-btn-pdf report-pdf-btn"
+          onClick={onGeneratePdf}
+          disabled={!rows.length}
+        >
+          Gerar relatório
+        </button>
       </header>
 
       <section className="report-scope-filters" aria-label="Recorte do relatório">
@@ -50,7 +62,7 @@ export function Report({
             <h3>Dias de campo</h3>
             <p>Folha da pesquisa (igual à lista do desktop).</p>
           </div>
-          <div className="report-scope-chips" role="listbox" aria-label="Dias de campo">
+          <div className="report-scope-chips report-scope-chips-days" role="listbox" aria-label="Dias de campo">
             <button
               type="button"
               role="option"
@@ -58,8 +70,8 @@ export function Report({
               className={`report-scope-chip${folha === ALL ? ' on' : ''}`}
               onClick={() => onSelectFolha(ALL)}
             >
-              <strong>Todas as folhas</strong>
-              <span>Usa a onda ou a janela tracking</span>
+              <strong>Todas</strong>
+              <span>Onda ou tracking</span>
             </button>
             {sheets.map((sheet) => {
               const on = folha === sheet
@@ -74,7 +86,7 @@ export function Report({
                   onClick={() => onSelectFolha(on ? ALL : sheet)}
                 >
                   <strong>Folha {dayLabel(sheet)}</strong>
-                  <span>{formatN(n)} entrevistas</span>
+                  <span>{formatN(n)}</span>
                 </button>
               )
             })}
@@ -86,7 +98,7 @@ export function Report({
             <h3>Ondas</h3>
             <p>Acumulado de dias: Onda 1 (6–8) e Onda 2 (9–10).</p>
           </div>
-          <div className="report-scope-chips" role="listbox" aria-label="Ondas">
+          <div className="report-scope-chips report-scope-chips-ondas" role="listbox" aria-label="Ondas">
             <button
               type="button"
               role="option"
@@ -97,7 +109,7 @@ export function Report({
               onClick={() => onSelectOnda(ALL)}
             >
               <strong>Janela tracking</strong>
-              <span>Últimos 3 dias ativos</span>
+              <span>Últimos 3 dias</span>
             </button>
             {ondas.map((o) => {
               const on = folha === ALL && onda === o.id
@@ -113,7 +125,7 @@ export function Report({
                 >
                   <strong>{o.label}</strong>
                   <span>
-                    {o.daysLabel} · {formatN(n)} entrevistas
+                    {o.daysLabel} · {formatN(n)}
                   </span>
                 </button>
               )

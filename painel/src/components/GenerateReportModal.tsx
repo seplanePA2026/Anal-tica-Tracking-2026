@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { generateReportPdf } from '../pdf/generateReport'
 import { formatN } from '../stats'
@@ -25,6 +25,14 @@ export function GenerateReportModal({
   )
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [])
 
   const rows =
     municipio === ALL
@@ -57,36 +65,39 @@ export function GenerateReportModal({
       <div
         className="pdf-card"
         role="dialog"
+        aria-modal="true"
         aria-labelledby="pdf-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id="pdf-title">Gerar relatório</h2>
-        <p className="login-lead">
-          O PDF inclui todos os campos da pesquisa deste recorte, com gráficos e
-          tabelas.
-        </p>
-        <div className="pdf-window-chip">
-          <span className="pdf-window-chip-label">Recorte</span>
-          <strong>{scopeHint}</strong>
-          <em>{formatN(allRows.length)} entrevistas na base deste relatório</em>
+        <div className="pdf-card-body">
+          <h2 id="pdf-title">Gerar relatório</h2>
+          <p className="login-lead">
+            O PDF inclui todos os campos da pesquisa deste recorte, com gráficos e
+            tabelas.
+          </p>
+          <div className="pdf-window-chip">
+            <span className="pdf-window-chip-label">Recorte</span>
+            <strong>{scopeHint}</strong>
+            <em>{formatN(allRows.length)} entrevistas na base deste relatório</em>
+          </div>
+          <label className="flt pdf-field">
+            Município
+            <select
+              value={municipio}
+              onChange={(e) => setMunicipio(e.target.value)}
+              disabled={busy}
+            >
+              <option value={ALL}>Pesquisa completa — Bahia</option>
+              {municipalities.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="pdf-n">{formatN(rows.length)} entrevistas neste recorte</p>
+          {error ? <p className="pdf-error">{error}</p> : null}
         </div>
-        <label className="flt pdf-field">
-          Município
-          <select
-            value={municipio}
-            onChange={(e) => setMunicipio(e.target.value)}
-            disabled={busy}
-          >
-            <option value={ALL}>Pesquisa completa — Bahia</option>
-            {municipalities.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <p className="pdf-n">{formatN(rows.length)} entrevistas neste recorte</p>
-        {error ? <p className="pdf-error">{error}</p> : null}
         <div className="pdf-actions">
           <button type="button" className="pdf-cancel" onClick={onClose} disabled={busy}>
             Cancelar
