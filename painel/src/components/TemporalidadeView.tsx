@@ -3,6 +3,7 @@ import { isCandidateLabel } from '../intencaoRejeicao'
 import { colorFor, countBy, formatN, formatPctNum } from '../stats'
 import { RESEARCH_WAVES, temporalPoints } from '../temporal'
 import { ALL, type Row } from '../types'
+import { GenerateTemporalidadeReportModal } from './GenerateTemporalidadeReportModal'
 import { IntencaoRejeicaoPanel } from './IntencaoRejeicaoPanel'
 
 type Props = {
@@ -15,6 +16,7 @@ const GOVERNOR_FIELD = 'ESTIMULADA GOVERNADOR'
 const SENATOR_FIELD = 'ESTIMULADA SENADOR 1ª OPÇÃO'
 
 export function TemporalidadeView({ rows, municipalities }: Props) {
+  const [pdfOpen, setPdfOpen] = useState(false)
   const wave = RESEARCH_WAVES[0]
   const dayLabels = useMemo(() => {
     const folhas = [
@@ -25,10 +27,31 @@ export function TemporalidadeView({ rows, municipalities }: Props) {
 
   return (
     <div className="temporal-page">
-      <header className="report-hero">
-        <p className="kicker">Temporalidade</p>
-        <h2>{wave?.label ?? 'Evolução'}</h2>
+      <header className="report-hero temporal-hero">
+        <div className="temporal-hero-text">
+          <p className="kicker">Temporalidade</p>
+          <h2>{wave?.label ?? 'Evolução'}</h2>
+          <p className="lede temporal-hero-lede">
+            Evolução por dia de campo · {dayLabels || 'sem dias'} ·{' '}
+            {formatN(rows.length)} entrevistas
+          </p>
+        </div>
+        <button
+          type="button"
+          className="tables-export-btn tables-export-btn-pdf temporal-pdf-btn"
+          onClick={() => setPdfOpen(true)}
+        >
+          Gerar relatório
+        </button>
       </header>
+
+      {pdfOpen ? (
+        <GenerateTemporalidadeReportModal
+          rows={rows}
+          municipalities={municipalities}
+          onClose={() => setPdfOpen(false)}
+        />
+      ) : null}
 
       <IntencaoRejeicaoPanel rows={rows} municipalities={municipalities} />
 
