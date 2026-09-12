@@ -60,9 +60,20 @@ export function temporalPoints(allRows: Row[], waves = RESEARCH_WAVES): TimePoin
 
 /**
  * Pontos do eixo em Intenção × rejeição:
- * unifica 06+07+08 num único ponto e cada dia seguinte (09, …) como ponto próprio.
+ * unifica cada onda num único ponto (06–08 e 09–11).
  */
-export const IR_BASE_FOLHAS = ['06.09', '07.09', '08.09'] as const
+export const IR_WAVE_FOLHAS: readonly (readonly string[])[] = [
+  ['06.09', '07.09', '08.09'],
+  ['09.09', '10.09', '11.09'],
+] as const
+
+/** @deprecated use IR_WAVE_FOLHAS[0] */
+export const IR_BASE_FOLHAS = IR_WAVE_FOLHAS[0]
+
+function irPointLabel(folhas: string[]): string {
+  if (folhas.length === 1) return folhas[0].replace(/\./g, '/')
+  return `${folhas[0].replace(/\./g, '/')}–${folhas[folhas.length - 1].replace(/\./g, '/')}`
+}
 
 export function temporalIrPoints(allRows: Row[]): TimePoint[] {
   const folhas = [...new Set(allRows.map((r) => r.folha).filter(Boolean) as string[])]
@@ -71,24 +82,23 @@ export function temporalIrPoints(allRows: Row[]): TimePoint[] {
     return [{ id: 'unica', label: 'Pesquisa', rows: allRows }]
   }
 
-  const baseSet = new Set<string>(IR_BASE_FOLHAS)
-  const baseFolhas = folhas.filter((f) => baseSet.has(f))
-  const laterFolhas = folhas.filter((f) => !baseSet.has(f))
+  const assigned = new Set<string>()
   const points: TimePoint[] = []
 
-  if (baseFolhas.length) {
-    const label =
-      baseFolhas.length === 1
-        ? baseFolhas[0].replace(/\./g, '/')
-        : `${baseFolhas[0].replace(/\./g, '/')}–${baseFolhas[baseFolhas.length - 1].replace(/\./g, '/')}`
+  for (const wave of IR_WAVE_FOLHAS) {
+    const present = wave.filter((f) => folhas.includes(f))
+    if (!present.length) continue
+    for (const f of present) assigned.add(f)
+    const set = new Set(present)
     points.push({
-      id: `base-${baseFolhas.join('-')}`,
-      label,
-      rows: allRows.filter((r) => r.folha != null && baseSet.has(r.folha)),
+      id: `wave-${present.join('-')}`,
+      label: irPointLabel(present),
+      rows: allRows.filter((r) => r.folha != null && set.has(r.folha)),
     })
   }
 
-  for (const folha of laterFolhas) {
+  for (const folha of folhas) {
+    if (assigned.has(folha)) continue
     points.push({
       id: folha,
       label: folha.replace(/\./g, '/'),
