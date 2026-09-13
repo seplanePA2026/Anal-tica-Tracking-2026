@@ -20,6 +20,7 @@ EXTRA_DAYS = [
     ROOT / "09.09 BA.xlsx",
     ROOT / "10.09.xlsx",
     ROOT / "11.09.xlsx",
+    ROOT / "12.09.xlsx",
 ]
 OUT = Path(__file__).resolve().parents[1] / "public" / "data.json"
 TRACKING_WINDOW = 3

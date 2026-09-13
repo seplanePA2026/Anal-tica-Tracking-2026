@@ -60,11 +60,12 @@ export function temporalPoints(allRows: Row[], waves = RESEARCH_WAVES): TimePoin
 
 /**
  * Pontos do eixo em Intenção × rejeição:
- * unifica cada onda num único ponto (06–08 e 09–11).
+ * unifica cada onda num único ponto (06–08, 09–11, 12–…).
  */
 export const IR_WAVE_FOLHAS: readonly (readonly string[])[] = [
   ['06.09', '07.09', '08.09'],
   ['09.09', '10.09', '11.09'],
+  ['12.09'],
 ] as const
 
 /** @deprecated use IR_WAVE_FOLHAS[0] */

@@ -12,7 +12,7 @@ function daySlash(folha: string): string {
   return folha.replace(/\./g, '/')
 }
 
-/** Definição das ondas: Onda 1 = 6–8; Onda 2 = 9–11. */
+/** Definição das ondas: Onda 1 = 6–8; Onda 2 = 9–11; Onda 3 = 12–… */
 export const RESEARCH_ONDAS: ResearchOnda[] = [
   {
     id: 'onda-1',
@@ -25,6 +25,12 @@ export const RESEARCH_ONDAS: ResearchOnda[] = [
     label: 'Onda 2',
     folhas: ['09.09', '10.09', '11.09'],
     daysLabel: '09/09 · 10/09 · 11/09',
+  },
+  {
+    id: 'onda-3',
+    label: 'Onda 3',
+    folhas: ['12.09'],
+    daysLabel: '12/09',
   },
 ]
 

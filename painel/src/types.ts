@@ -47,7 +47,7 @@ export type Filters = {
   renda: string
   enquadramento: string
   folha: string
-  /** Onda de campo (ex.: onda-1 = 06–08, onda-2 = 09–11). */
+  /** Onda de campo (ex.: onda-1 = 06–08, onda-2 = 09–11, onda-3 = 12–…). */
   onda: string
   dia: string
   answerField: string
