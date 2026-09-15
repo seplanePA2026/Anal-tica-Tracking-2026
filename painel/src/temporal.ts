@@ -65,7 +65,7 @@ export function temporalPoints(allRows: Row[], waves = RESEARCH_WAVES): TimePoin
 export const IR_WAVE_FOLHAS: readonly (readonly string[])[] = [
   ['06.09', '07.09', '08.09'],
   ['09.09', '10.09', '11.09'],
-  ['12.09', '13.09'],
+  ['12.09', '13.09', '14.09'],
 ] as const
 
 /** @deprecated use IR_WAVE_FOLHAS[0] */

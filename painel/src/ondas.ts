@@ -29,8 +29,8 @@ export const RESEARCH_ONDAS: ResearchOnda[] = [
   {
     id: 'onda-3',
     label: 'Onda 3',
-    folhas: ['12.09', '13.09'],
-    daysLabel: '12/09 · 13/09',
+    folhas: ['12.09', '13.09', '14.09'],
+    daysLabel: '12/09 · 13/09 · 14/09',
   },
 ]
 

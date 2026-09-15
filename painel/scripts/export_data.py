@@ -22,6 +22,7 @@ EXTRA_DAYS = [
     ROOT / "11.09.xlsx",
     ROOT / "12.09.xlsx",
     ROOT / "13.09.xlsx",
+    ROOT / "14.09.xlsx",
 ]
 OUT = Path(__file__).resolve().parents[1] / "public" / "data.json"
 TRACKING_WINDOW = 3
@@ -174,8 +175,12 @@ def load_workbook(path: Path) -> list[tuple[str, str, pd.DataFrame]]:
     for sheet in pd.ExcelFile(path).sheet_names:
         if sheet.strip().lower() == "excluido":
             continue
-        df = strip_frame(pd.read_excel(path, sheet_name=sheet, dtype=object))
         label = folha_label(sheet)
+        # Skip auxiliary tabs (e.g. cotas) that are not field-day sheets.
+        if not re.match(r"^\d{2}\.\d{2}$", label):
+            print(f"aviso: ignorando aba auxiliar {path.name}/{sheet}")
+            continue
+        df = strip_frame(pd.read_excel(path, sheet_name=sheet, dtype=object))
         df["__folha"] = label
         out.append((path.name, sheet, df))
     return out
