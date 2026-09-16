@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { fieldColumn, fieldHeading, QUESTION_SEQUENCE } from '../labels'
+import { fieldColumn, fieldHeading, isTableColumnKey, QUESTION_SEQUENCE } from '../labels'
 import { exportTablesExcel, exportTablesPdf } from '../export/exportTables'
 import { formatN } from '../stats'
 import type { Dataset, Row } from '../types'
@@ -13,7 +13,8 @@ type Props = {
 const LEAD_COLS = ['Municípios', 'folha', 'dia'] as const
 
 export function TablesView({ rows, scopeLabel }: Props) {
-  const columns = [...LEAD_COLS, ...QUESTION_SEQUENCE]
+  const questionKeys = QUESTION_SEQUENCE.filter(isTableColumnKey)
+  const columns = [...LEAD_COLS, ...questionKeys].filter(isTableColumnKey)
   const [busy, setBusy] = useState<'excel' | 'pdf' | null>(null)
   const [progress, setProgress] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -23,7 +24,7 @@ export function TablesView({ rows, scopeLabel }: Props) {
     setProgress(null)
     setBusy('excel')
     try {
-      await exportTablesExcel(rows, QUESTION_SEQUENCE, scopeLabel)
+      await exportTablesExcel(rows, questionKeys, scopeLabel)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Falha ao exportar Excel.')
     } finally {
@@ -39,7 +40,7 @@ export function TablesView({ rows, scopeLabel }: Props) {
     try {
       // Libera o clique atual antes do trabalho pesado.
       await new Promise((r) => window.setTimeout(r, 30))
-      await exportTablesPdf(rows, QUESTION_SEQUENCE, scopeLabel, setProgress)
+      await exportTablesPdf(rows, questionKeys, scopeLabel, setProgress)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Falha ao exportar PDF.')
     } finally {

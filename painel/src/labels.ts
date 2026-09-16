@@ -333,6 +333,26 @@ export const QUESTION_SECTIONS: { id: string; title: string; keys: string[] }[] 
 
 export const QUESTION_SEQUENCE = QUESTION_SECTIONS.flatMap((g) => g.keys)
 
+/** Nunca exibir na visão Tabelas / exports (GPS e horários da entrevista). */
+export const TABLE_HIDDEN_KEYS = new Set(
+  [
+    'Coordenadas',
+    'Latitude',
+    'Longitude',
+    'Data início',
+    'Data fim',
+    'Duração',
+    'início',
+    'término',
+    'inicio',
+    'termino',
+  ].map((k) => k.toLowerCase()),
+)
+
+export function isTableColumnKey(key: string): boolean {
+  return !TABLE_HIDDEN_KEYS.has(key.trim().toLowerCase())
+}
+
 /** Perguntas da pesquisa (sem bloco de perfil do entrevistado). */
 export const RESEARCH_SECTIONS = QUESTION_SECTIONS.filter((g) => g.id !== 'perfil')
 

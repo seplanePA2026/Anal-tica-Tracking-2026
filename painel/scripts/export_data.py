@@ -23,6 +23,7 @@ EXTRA_DAYS = [
     ROOT / "12.09.xlsx",
     ROOT / "13.09.xlsx",
     ROOT / "14.09.xlsx",
+    ROOT / "15.09.xlsx",
 ]
 OUT = Path(__file__).resolve().parents[1] / "public" / "data.json"
 TRACKING_WINDOW = 3
@@ -34,6 +35,11 @@ EXCLUDE = {
     "Duração",
     "Latitude",
     "Longitude",
+    "Coordenadas",
+    "início",
+    "término",
+    "inicio",
+    "termino",
     "Nome",
     "Endereço",
     "Bairro",

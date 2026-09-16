@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx'
-import { fieldColumn } from '../labels'
+import { fieldColumn, isTableColumnKey } from '../labels'
 import type { Row } from '../types'
 
 const LEAD_COLS = ['Municípios', 'folha', 'dia'] as const
@@ -7,7 +7,7 @@ const PDF_ROW_CHUNK = 60
 const PDF_QUESTION_COLS = 6
 
 function tableColumns(questionKeys: string[]): string[] {
-  return [...LEAD_COLS, ...questionKeys]
+  return [...LEAD_COLS, ...questionKeys].filter(isTableColumnKey)
 }
 
 function slugScope(scopeLabel: string): string {
