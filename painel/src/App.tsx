@@ -27,6 +27,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null)
   const [view, setView] = useState<ViewId>('mapa')
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS)
+  const [tableFolha, setTableFolha] = useState<string>(ALL)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [listOpen, setListOpen] = useState(false)
   const [pdfOpen, setPdfOpen] = useState(false)
@@ -225,6 +226,13 @@ export default function App() {
     return trackingRows.filter((r) => r['Municípios'] === filters.municipio)
   }, [trackingRows, filters.municipio])
 
+  /** Base da visão Tabelas: todas as folhas, só recorte de município. */
+  const tableRows = useMemo(() => {
+    if (!data) return []
+    if (filters.municipio === ALL) return data.rows
+    return data.rows.filter((r) => r['Municípios'] === filters.municipio)
+  }, [data, filters.municipio])
+
   const mapMunicipalities = useMemo(() => {
     if (!data) return []
     return data.municipalities
@@ -372,6 +380,18 @@ export default function App() {
               onChange={(v) => setFilter('municipio', v)}
               options={munOpts}
             />
+            {view === 'tabela' ? (
+              <Select
+                label="Dia de pesquisa"
+                value={tableFolha}
+                onChange={setTableFolha}
+                options={data.meta.sheets}
+                allLabel={`Janela tracking (${trackingFolhas.map((s) => s.replace(/\./g, '/')).join(' · ') || 'últimos 3 dias'})`}
+                formatOption={(sheet) =>
+                  `Folha ${sheet.replace(/\./g, '/')} · ${formatN(data.meta.nPorFolha[sheet] ?? 0)}`
+                }
+              />
+            ) : null}
             {view === 'relatorio' ? (
               <>
                 <Select
@@ -430,7 +450,10 @@ export default function App() {
               <button
                 type="button"
                 className="clear-filters"
-                onClick={() => setFilters(EMPTY_FILTERS)}
+                onClick={() => {
+                  setFilters(EMPTY_FILTERS)
+                  setTableFolha(ALL)
+                }}
               >
                 Limpar filtros
               </button>
@@ -549,12 +572,14 @@ export default function App() {
           >
             <div className="table-page">
               <TablesView
-                data={data}
-                rows={munRows}
+                rows={tableRows}
+                trackingFolhas={trackingFolhas}
+                folha={tableFolha}
                 scopeLabel={
                   filters.municipio === ALL ? 'Pesquisa completa — Bahia' : filters.municipio
                 }
               />
+
             </div>
           </div>
         ) : null}

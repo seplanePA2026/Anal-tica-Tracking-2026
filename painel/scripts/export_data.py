@@ -27,6 +27,7 @@ EXTRA_DAYS = [
     ROOT / "16.09.xlsx",
     ROOT / "17.09.xlsx",
     ROOT / "18.09.xlsx",
+    ROOT / "19.09.xlsx",
 ]
 OUT = Path(__file__).resolve().parents[1] / "public" / "data.json"
 TRACKING_WINDOW = 3
@@ -243,10 +244,11 @@ def main() -> None:
 
     municipalities = []
     for name, g in raw_tracking.groupby("Municípios", dropna=False):
-        sub = gps[gps["Municípios"] == name]
+        label = cell(name) or "(vazio)"
+        sub = gps[gps["Municípios"] == name] if cell(name) is not None else gps[gps["Municípios"].isna()]
         municipalities.append(
             {
-                "name": str(name),
+                "name": label,
                 "n": int(len(g)),
                 "lat": float(sub["Latitude"].median()) if len(sub) else None,
                 "lon": float(sub["Longitude"].median()) if len(sub) else None,
