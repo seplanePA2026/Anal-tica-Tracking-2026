@@ -232,20 +232,29 @@ def main() -> None:
     tracking_mask = raw["__folha"].isin(tracking_folhas)
     raw_tracking = raw.loc[tracking_mask].copy()
 
-    gps = raw_tracking[
-        (raw_tracking["Latitude"].notna())
-        & (raw_tracking["Longitude"].notna())
-        & (raw_tracking["Latitude"] != 0)
-        & (raw_tracking["Longitude"] != 0)
-    ].copy()
-    gps["Latitude"] = pd.to_numeric(gps["Latitude"], errors="coerce")
-    gps["Longitude"] = pd.to_numeric(gps["Longitude"], errors="coerce")
-    gps = gps[gps["Latitude"].notna() & gps["Longitude"].notna()]
+    # Map markers use median GPS per municipality from ANY field day that still
+    # carries coordinates (recent exports omit Latitude/Longitude). Counts (n)
+    # remain scoped to the active tracking window.
+    if "Latitude" in raw.columns and "Longitude" in raw.columns:
+        gps = raw[
+            (raw["Latitude"].notna())
+            & (raw["Longitude"].notna())
+            & (raw["Latitude"] != 0)
+            & (raw["Longitude"] != 0)
+        ].copy()
+        gps["Latitude"] = pd.to_numeric(gps["Latitude"], errors="coerce")
+        gps["Longitude"] = pd.to_numeric(gps["Longitude"], errors="coerce")
+        gps = gps[gps["Latitude"].notna() & gps["Longitude"].notna()]
+    else:
+        gps = raw.iloc[0:0].copy()
 
     municipalities = []
     for name, g in raw_tracking.groupby("Municípios", dropna=False):
         label = cell(name) or "(vazio)"
-        sub = gps[gps["Municípios"] == name] if cell(name) is not None else gps[gps["Municípios"].isna()]
+        if cell(name) is None:
+            sub = gps.iloc[0:0]
+        else:
+            sub = gps[gps["Municípios"] == name]
         municipalities.append(
             {
                 "name": label,
@@ -294,7 +303,7 @@ def main() -> None:
                 "Valores copiados da planilha sem alteração, interpolação ou exclusão de entrevistas.",
                 "A folha 'excluido' da planilha oficial não entra na visualização.",
                 "Campos do pesquisador e dados pessoais do entrevistado não entram na visualização.",
-                "Coordenadas do mapa são a mediana do GPS válido de cada município (excluídos pares 0,0).",
+                "Coordenadas do mapa são a mediana do GPS válido de cada município em qualquer dia de campo que ainda traga Latitude/Longitude (excluídos pares 0,0).",
                 "Nomes de município, categorias e textos de resposta são os da planilha.",
                 f"Janela tracking ativa ({TRACKING_WINDOW} dias): {', '.join(tracking_folhas)}.",
                 (
