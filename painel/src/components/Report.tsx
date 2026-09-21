@@ -96,7 +96,7 @@ export function Report({
         <div className="report-scope-block">
           <div className="report-scope-block-head">
             <h3>Ondas</h3>
-            <p>Acumulado de dias: Onda 1 (6–8), Onda 2 (9–11), Onda 3 (12–14), Onda 4 (15–17) e Onda 5 (18–19).</p>
+            <p>Acumulado de dias: Onda 1 (6–8), Onda 2 (9–11), Onda 3 (12–14), Onda 4 (15–17) e Onda 5 (18–20).</p>
           </div>
           <div className="report-scope-chips report-scope-chips-ondas" role="listbox" aria-label="Ondas">
             <button

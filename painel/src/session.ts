@@ -45,6 +45,24 @@ const ACCOUNTS: {
       role: 'Administrador',
     },
   },
+  {
+    user: 'adolpholoyola@analitica.com',
+    password: 'Analitica2026',
+    profile: {
+      name: 'Adolpho Loyola',
+      email: 'adolpholoyola@analitica.com',
+      role: 'Analista',
+    },
+  },
+  {
+    user: 'pedroscavuzzi@analitica.com',
+    password: 'Analitica2026',
+    profile: {
+      name: 'Pedro Scavuzzi',
+      email: 'pedroscavuzzi@analitica.com',
+      role: 'Analista',
+    },
+  },
 ]
 
 export function authenticate(user: string, password: string): SessionUser | null {

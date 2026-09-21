@@ -143,6 +143,15 @@ function RaceBlock({
 function dayLabel(label: string): string {
   const m = label.match(/^0?(\d{1,2})\.(\d{2})$/)
   if (m) return `${Number(m[1])}/${m[2]}`
+  // Onda: "06/09–08/09" → "6–8/09"
+  const range = label.match(
+    /^0?(\d{1,2})\/(\d{2})\s*[–-]\s*0?(\d{1,2})\/(\d{2})$/,
+  )
+  if (range) {
+    const [, d1, m1, d2, m2] = range
+    if (m1 === m2) return `${Number(d1)}–${Number(d2)}/${m1}`
+    return `${Number(d1)}/${m1}–${Number(d2)}/${m2}`
+  }
   return label
 }
 
@@ -155,9 +164,9 @@ function IRDayChart({
 }) {
   if (!points.length) return null
 
-  const pad = { top: 22, right: 52, bottom: 36, left: 40 }
-  const width = 340
-  const height = 168
+  const pad = { top: 22, right: 48, bottom: 40, left: 36 }
+  const width = 420
+  const height = 176
   const innerW = width - pad.left - pad.right
   const innerH = height - pad.top - pad.bottom
   const maxY = Math.max(
