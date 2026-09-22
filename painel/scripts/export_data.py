@@ -15,7 +15,6 @@ import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[2]
-SOURCE = ROOT / "BD Pesquisa_Estadual_Bahia_26_oficial.xlsx"
 EXTRA_DAYS = [
     ROOT / "09.09 BA.xlsx",
     ROOT / "10.09.xlsx",
@@ -29,7 +28,16 @@ EXTRA_DAYS = [
     ROOT / "18.09.xlsx",
     ROOT / "19.09.xlsx",
     ROOT / "20.09.xlsx",
+    ROOT / "21.09.xlsx",
 ]
+SOURCE = ROOT / "BD Pesquisa_Estadual_Bahia_26_oficial.xlsx"
+# Local machines sometimes only keep the consolidated daily workbooks.
+if not SOURCE.exists():
+    for candidate in reversed(EXTRA_DAYS):
+        if candidate.exists():
+            SOURCE = candidate
+            print(f"aviso: BD oficial ausente; usando {SOURCE.name} como base")
+            break
 OUT = Path(__file__).resolve().parents[1] / "public" / "data.json"
 TRACKING_WINDOW = 3
 
