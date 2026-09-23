@@ -29,6 +29,7 @@ EXTRA_DAYS = [
     ROOT / "19.09.xlsx",
     ROOT / "20.09.xlsx",
     ROOT / "21.09.xlsx",
+    ROOT / "22.09.xlsx",
 ]
 SOURCE = ROOT / "BD Pesquisa_Estadual_Bahia_26_oficial.xlsx"
 # Local machines sometimes only keep the consolidated daily workbooks.

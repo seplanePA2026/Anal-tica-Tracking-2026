@@ -35,8 +35,8 @@ Worker: `analitica-tracking`
 ## Dados
 
 - Base oficial: `BD Pesquisa_Estadual_Bahia_26_oficial.xlsx` (campo 6, 7 e 8 de setembro de 2026).
-- Dias extras: `09.09 BA.xlsx`, `10.09.xlsx`, `11.09.xlsx`, `12.09.xlsx`, `13.09.xlsx`, `14.09.xlsx`, `15.09.xlsx`, `16.09.xlsx`, `17.09.xlsx`, `18.09.xlsx`, `19.09.xlsx`, `20.09.xlsx`, `21.09.xlsx` (janela tracking = últimos 3 dias).
-- Ondas: Onda 1 = 06–08; Onda 2 = 09–11; Onda 3 = 12–14; Onda 4 = 15–17; Onda 5 = 18–20; Onda 6 = 21–….
+- Dias extras: `09.09 BA.xlsx`, `10.09.xlsx`, `11.09.xlsx`, `12.09.xlsx`, `13.09.xlsx`, `14.09.xlsx`, `15.09.xlsx`, `16.09.xlsx`, `17.09.xlsx`, `18.09.xlsx`, `19.09.xlsx`, `20.09.xlsx`, `21.09.xlsx`, `22.09.xlsx` (janela tracking = últimos 3 dias).
+- Ondas: Onda 1 = 06–08; Onda 2 = 09–11; Onda 3 = 12–14; Onda 4 = 15–17; Onda 5 = 18–20; Onda 6 = 21–22.
 - Microdados publicados: `painel/public/data.json` (gerado a partir da planilha, sem PII de pesquisador).
 - A planilha Excel **não** vai no GitHub.
 - A folha `excluido` da planilha oficial não entra no JSON.
