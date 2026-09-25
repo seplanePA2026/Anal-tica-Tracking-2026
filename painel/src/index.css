@@ -3128,7 +3128,7 @@ tr.is-sel {
   flex-shrink: 0;
 }
 
-/* —— Acumulador —— */
+/* --- Acumulador --- */
 .acumulador-page {
   display: flex;
   flex-direction: column;
