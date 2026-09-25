@@ -29,10 +29,19 @@ const GOVERNOR_FIELD = 'ESTIMULADA GOVERNADOR'
 const JERO_APOIOS_FIELD = 'JEROXACM com apoios'
 const JERO_APOIOS_CANDS = ['Jerônimo Rodrigues', 'ACM Neto'] as const
 
+type CityPoint = {
+  x: string
+  n: number
+  total: number
+  acumuladoN: number
+  acumuladoTotal: number
+  pct: number
+}
+
 type CitySeries = {
   city: string
   color: string
-  points: { x: string; pct: number; n: number; total: number; acumuladoN: number; acumuladoTotal: number }[]
+  points: CityPoint[]
 }
 
 function shortWaveLabel(label: string): string {
@@ -72,11 +81,11 @@ function buildCitySeries(
       acumuladoTotal += total
       return {
         x: shortWaveLabel(w.label),
-        pct: acumuladoTotal ? (acumuladoN / acumuladoTotal) * 100 : 0,
         n,
         total,
         acumuladoN,
         acumuladoTotal,
+        pct: acumuladoTotal ? (acumuladoN / acumuladoTotal) * 100 : 0,
       }
     })
     return {
@@ -117,8 +126,8 @@ export function AcumuladorView({ rows }: Props) {
           <p className="lede">
             {formatN(cityRows.length)} entrevistas em Salvador, Feira de Santana,
             Vitória da Conquista, Camaçari e Lauro de Freitas ·{' '}
-            {IR_WAVE_FOLHAS.length} ondas. Escolha o candidato e compare o
-            acumulado por cidade.
+            {IR_WAVE_FOLHAS.length} ondas. Linhas partem do acumulado inicial e
+            mostram o crescimento por município.
           </p>
         </div>
       </header>
@@ -181,6 +190,14 @@ function AcumuladorRace({
     [fieldKey, active, waves],
   )
 
+  const waveBaseAcum = useMemo(() => {
+    if (!series.length) return [] as { x: string; acumulado: number }[]
+    return series[0].points.map((_, wi) => ({
+      x: series[0].points[wi].x,
+      acumulado: series.reduce((s, city) => s + city.points[wi].acumuladoTotal, 0),
+    }))
+  }, [series])
+
   if (!options.length) {
     return (
       <section className="temporal-intencao-card temporal-intencao-card-full acumulador-card">
@@ -196,8 +213,8 @@ function AcumuladorRace({
         <div>
           <h3>{title}</h3>
           <p className="temporal-acumulado-lede">
-            Acumulado por onda · % do candidato no município (entrevistas
-            acumuladas até a onda).
+            Evolução do acumulado de intenções por município (ondas). Use o filtro
+            para trocar o candidato.
           </p>
         </div>
         <label className="acumulador-cand-filter">
@@ -211,12 +228,66 @@ function AcumuladorRace({
           </select>
         </label>
       </div>
-      <CityCrossChart series={series} candidate={active} />
+      <CityCrossLineChart series={series} candidate={active} />
+      <div className="table-scroll acum-table acum-table-compact">
+        <table>
+          <thead>
+            <tr>
+              <th>Município</th>
+              {series[0]?.points.map((p) => (
+                <th key={p.x} className="num">
+                  Acum. {p.x}
+                </th>
+              ))}
+              <th className="num">Total</th>
+              <th className="num">% no município</th>
+            </tr>
+          </thead>
+          <tbody>
+            {series.map((s) => {
+              const last = s.points[s.points.length - 1]
+              return (
+                <tr key={s.city}>
+                  <td>
+                    <span
+                      className="line-swatch"
+                      style={{ background: s.color, marginRight: 8 }}
+                      aria-hidden="true"
+                    />
+                    {s.city}
+                  </td>
+                  {s.points.map((p) => (
+                    <td key={p.x} className="num">
+                      {formatN(p.acumuladoN)}
+                    </td>
+                  ))}
+                  <td className="num">{formatN(last?.acumuladoN ?? 0)}</td>
+                  <td className="num">{formatPctNum(last?.pct ?? 0)}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+          <tfoot>
+            <tr>
+              <th>Base (entrevistas)</th>
+              {waveBaseAcum.map((d) => (
+                <th key={d.x} className="num">
+                  {formatN(d.acumulado)}
+                </th>
+              ))}
+              <th className="num">
+                {formatN(waveBaseAcum[waveBaseAcum.length - 1]?.acumulado ?? 0)}
+              </th>
+              <th className="num">—</th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
     </section>
   )
 }
 
-function CityCrossChart({
+function CityCrossLineChart({
   series,
   candidate,
 }: {
@@ -227,92 +298,133 @@ function CityCrossChart({
     return <p className="empty-filter">Sem dados para {candidate}.</p>
   }
 
-  const labels = series[0].points.map((p) => p.x)
-  const pad = { top: 28, right: 16, bottom: 44, left: 44 }
+  const xs = series[0].points.map((p) => p.x)
+  const pad = { top: 28, right: 56, bottom: 44, left: 48 }
   const width = 960
-  const height = 340
+  const height = 360
   const innerW = width - pad.left - pad.right
   const innerH = height - pad.top - pad.bottom
-  const maxPct = Math.max(
-    10,
-    ...series.flatMap((s) => s.points.map((p) => p.pct)),
-  )
-  const yMax = Math.min(100, Math.ceil(maxPct / 5) * 5 || 10)
-  const nCities = series.length
-  const nWaves = labels.length
-  const groupW = innerW / Math.max(1, nWaves)
-  const barGap = 2
-  const barW = Math.max(4, (groupW - 16) / nCities - barGap)
+  const maxY = Math.max(1, ...series.flatMap((s) => s.points.map((p) => p.acumuladoN)))
+  const yMax = Math.ceil(maxY / 50) * 50 || 50
+  const minGap = 18
+  const yLo = pad.top + 14
+  const yHi = pad.top + innerH - 10
 
-  const yPos = (pct: number) => pad.top + innerH - (pct / yMax) * innerH
+  const xPos = (i: number) => {
+    if (xs.length <= 1) return pad.left + innerW / 2
+    const edge = Math.min(48, innerW * 0.08)
+    const usable = innerW - edge * 2
+    return pad.left + edge + (i / (xs.length - 1)) * usable
+  }
+  const yPos = (value: number) => pad.top + innerH - (value / yMax) * innerH
+
+  const displayY: number[][] = series.map((s) =>
+    s.points.map((p) => yPos(p.acumuladoN)),
+  )
+  for (let day = 0; day < xs.length; day++) {
+    const items = series.map((s, si) => ({
+      si,
+      v: s.points[day]?.acumuladoN ?? 0,
+      y: displayY[si][day],
+    }))
+    items.sort((a, b) => a.v - b.v || a.si - b.si)
+    for (let k = 0; k < items.length; k++) {
+      if (k === 0) items[k].y = Math.min(yHi, items[k].y)
+      else items[k].y = Math.min(items[k].y, items[k - 1].y - minGap)
+    }
+    for (let k = items.length - 1; k >= 0; k--) {
+      if (k === items.length - 1) items[k].y = Math.max(yLo, items[k].y)
+      else items[k].y = Math.max(items[k].y, items[k + 1].y + minGap)
+    }
+    for (const it of items) displayY[it.si][day] = it.y
+  }
+
+  const gridYs = [0, 0.25, 0.5, 0.75, 1].map((t) => t * yMax)
 
   return (
-    <div className="acumulador-chart-wrap">
+    <div className="acumulador-chart-wrap line-chart-wrap acum-chart">
       <svg
         className="line-chart acumulador-chart"
         viewBox={`0 0 ${width} ${height}`}
         role="img"
-        aria-label={`Acumulado de ${candidate} por município e onda`}
+        aria-label={`Evolução acumulada de ${candidate} por município`}
       >
-        {[0, 0.25, 0.5, 0.75, 1].map((t) => {
-          const g = t * yMax
-          return (
-            <g key={g}>
-              <line
-                x1={pad.left}
-                x2={pad.left + innerW}
-                y1={yPos(g)}
-                y2={yPos(g)}
-                className="line-grid"
-              />
-              <text
-                x={pad.left - 8}
-                y={yPos(g) + 4}
-                className="line-axis"
-                textAnchor="end"
-              >
-                {formatPctNum(g)}
-              </text>
-            </g>
-          )
-        })}
+        {gridYs.map((g) => (
+          <g key={g}>
+            <line
+              x1={pad.left}
+              x2={pad.left + innerW}
+              y1={yPos(g)}
+              y2={yPos(g)}
+              className="line-grid"
+            />
+            <text
+              x={pad.left - 8}
+              y={yPos(g) + 4}
+              className="line-axis"
+              textAnchor="end"
+            >
+              {formatN(g)}
+            </text>
+          </g>
+        ))}
 
-        {labels.map((label, wi) => {
-          const groupX = pad.left + wi * groupW + 8
+        {xs.map((label, i) => (
+          <text
+            key={label}
+            x={xPos(i)}
+            y={height - 14}
+            className="line-axis"
+            textAnchor="middle"
+          >
+            {label}
+          </text>
+        ))}
+
+        {series.map((s, si) => {
+          const d = s.points
+            .map((_, i) => `${i === 0 ? 'M' : 'L'} ${xPos(i)} ${displayY[si][i]}`)
+            .join(' ')
           return (
-            <g key={label}>
-              {series.map((s, ci) => {
-                const p = s.points[wi]
-                const h = Math.max(0, ((p?.pct ?? 0) / yMax) * innerH)
-                const x = groupX + ci * (barW + barGap)
-                const y = pad.top + innerH - h
+            <g key={s.city}>
+              <path
+                d={d}
+                fill="none"
+                stroke={s.color}
+                strokeWidth={2.5}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+              {s.points.map((p, i) => {
+                const cx = xPos(i)
+                const cy = displayY[si][i]
                 return (
-                  <g key={s.city}>
-                    <rect
-                      x={x}
-                      y={y}
-                      width={barW}
-                      height={h}
+                  <g key={`${s.city}-${p.x}`}>
+                    <circle
+                      cx={cx}
+                      cy={cy}
+                      r={4.5}
                       fill={s.color}
-                      rx={2}
+                      stroke="#fff"
+                      strokeWidth={1.5}
                     >
                       <title>
-                        {s.city} · {label}: {formatPctNum(p?.pct ?? 0)} (
-                        {formatN(p?.acumuladoN ?? 0)} /{' '}
-                        {formatN(p?.acumuladoTotal ?? 0)})
+                        {s.city} · {p.x}: {formatN(p.acumuladoN)} acum. (
+                        {formatPctNum(p.pct)})
                       </title>
-                    </rect>
+                    </circle>
+                    <text
+                      x={cx}
+                      y={cy - 10}
+                      className="acum-point-label ir-day-halo"
+                      textAnchor="middle"
+                      fill={s.color}
+                    >
+                      {formatN(p.acumuladoN)}
+                    </text>
                   </g>
                 )
               })}
-              <text
-                x={groupX + ((nCities * (barW + barGap) - barGap) / 2)}
-                y={height - 14}
-                className="line-axis"
-                textAnchor="middle"
-              >
-                {label}
-              </text>
             </g>
           )
         })}
@@ -325,7 +437,7 @@ function CityCrossChart({
               <span className="line-swatch" style={{ background: s.color }} />
               {s.city}
               <em>
-                {formatPctNum(last?.pct ?? 0)} · {formatN(last?.acumuladoN ?? 0)}
+                {formatN(last?.acumuladoN ?? 0)} · {formatPctNum(last?.pct ?? 0)}
               </em>
             </li>
           )
