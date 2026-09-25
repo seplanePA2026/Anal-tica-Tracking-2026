@@ -485,7 +485,8 @@ button, select { font-family: inherit; }
 
 .stage-relatorio.is-on,
 .stage-tabela.is-on,
-.stage-temporalidade.is-on {
+.stage-temporalidade.is-on,
+.stage-acumulador.is-on {
   height: 100%;
   min-height: 0;
   overflow: auto;
@@ -1358,6 +1359,7 @@ tr.is-sel {
   .stage-relatorio,
   .stage-tabela,
   .stage-temporalidade,
+  .stage-acumulador,
   .side,
   .report-page,
   .table-page,
@@ -3124,4 +3126,108 @@ tr.is-sel {
   height: 10px;
   border-radius: 999px;
   flex-shrink: 0;
+}
+
+/* —— Acumulador —— */
+.acumulador-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 100%;
+  max-width: none;
+}
+
+.acum-city-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+}
+
+.acum-city-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.acum-city-legend em {
+  font-style: normal;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.acumulador-card {
+  width: 100%;
+  margin: 0;
+}
+
+.acumulador-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px 20px;
+  margin-bottom: 14px;
+}
+
+.acumulador-card-head h3 {
+  margin: 0 0 4px;
+}
+
+.acumulador-cand-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  min-width: min(280px, 100%);
+}
+
+.acumulador-cand-filter select {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fff;
+}
+
+.acumulador-chart-wrap {
+  width: 100%;
+}
+
+.acumulador-chart {
+  width: 100%;
+  height: auto;
+  display: block;
+  min-height: 280px;
+}
+
+.acumulador-chart-legend {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #efeaf6;
+}
+
+@media (max-width: 720px) {
+  .acumulador-card-head {
+    flex-direction: column;
+  }
+
+  .acumulador-cand-filter {
+    width: 100%;
+  }
 }

@@ -6,6 +6,7 @@ import { MapView } from './components/MapView'
 import { Report } from './components/Report'
 import { TablesView } from './components/TablesView'
 import { TemporalidadeView } from './components/TemporalidadeView'
+import { AcumuladorView } from './components/AcumuladorView'
 import { UserMenu } from './components/UserMenu'
 import {
   ALL,
@@ -37,11 +38,13 @@ export default function App() {
     relatorio: false,
     tabela: false,
     temporalidade: false,
+    acumulador: false,
   })
   const stageRef = useRef<HTMLElement>(null)
   const reportRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<HTMLDivElement>(null)
   const temporalRef = useRef<HTMLDivElement>(null)
+  const acumuladorRef = useRef<HTMLDivElement>(null)
   const listSideRef = useRef<HTMLDivElement>(null)
   const mapSideRef = useRef<HTMLElement>(null)
 
@@ -69,6 +72,7 @@ export default function App() {
     reportRef.current && (reportRef.current.scrollTop = 0)
     tableRef.current && (tableRef.current.scrollTop = 0)
     temporalRef.current && (temporalRef.current.scrollTop = 0)
+    acumuladorRef.current && (acumuladorRef.current.scrollTop = 0)
     listSideRef.current && (listSideRef.current.scrollTop = 0)
     mapSideRef.current && (mapSideRef.current.scrollTop = 0)
     html.style.scrollBehavior = prev
@@ -283,6 +287,7 @@ export default function App() {
                 ['relatorio', 'Relatórios'],
                 ['tabela', 'Tabelas'],
                 ['temporalidade', 'Temporalidade'],
+                ['acumulador', 'Acumulador'],
               ] as const
             ).map(([id, label]) => (
               <button
@@ -473,6 +478,9 @@ export default function App() {
         {view === 'temporalidade' && !visited.temporalidade ? (
           <p className="pane-loading">Carregando temporalidade…</p>
         ) : null}
+        {view === 'acumulador' && !visited.acumulador ? (
+          <p className="pane-loading">Carregando acumulador…</p>
+        ) : null}
         {visited.mapa ? (
           <div className={`stage-pane stage-mapa${view === 'mapa' ? ' is-on' : ''}`}>
             <MapView
@@ -616,6 +624,17 @@ export default function App() {
           >
             <div className="report-page">
               <TemporalidadeView rows={temporalRows} municipalities={temporalMunOpts} />
+            </div>
+          </div>
+        ) : null}
+
+        {visited.acumulador ? (
+          <div
+            className={`stage-pane stage-acumulador${view === 'acumulador' ? ' is-on' : ''}`}
+            ref={acumuladorRef}
+          >
+            <div className="report-page">
+              <AcumuladorView rows={temporalRows} />
             </div>
           </div>
         ) : null}

@@ -69,4 +69,10 @@ export const EMPTY_FILTERS: Filters = {
   answerValue: ALL,
 }
 
-export type ViewId = 'mapa' | 'lista' | 'tabela' | 'relatorio' | 'temporalidade'
+export type ViewId =
+  | 'mapa'
+  | 'lista'
+  | 'tabela'
+  | 'relatorio'
+  | 'temporalidade'
+  | 'acumulador'
