@@ -294,24 +294,20 @@ function CityCrossLineChart({
   series: CitySeries[]
   candidate: string
 }) {
+  const [hoverDay, setHoverDay] = useState<number | null>(null)
+
   if (!series.length || !series[0]?.points.length) {
     return <p className="empty-filter">Sem dados para {candidate}.</p>
   }
 
   const xs = series[0].points.map((p) => p.x)
-  const pad = { top: 44, right: 52, bottom: 48, left: 52 }
+  const pad = { top: 28, right: 52, bottom: 48, left: 52 }
   const width = 960
-  const height = 420
+  const height = 400
   const innerW = width - pad.left - pad.right
   const innerH = height - pad.top - pad.bottom
   const maxY = Math.max(1, ...series.flatMap((s) => s.points.map((p) => p.acumuladoN)))
   const yMax = Math.ceil(maxY / 50) * 50 || 50
-  /** Distância mínima do número ao centro da bolinha. */
-  const labelClear = 16
-  /** Distância mínima entre números no mesmo dia. */
-  const labelGap = 15
-  const labelLo = pad.top + 10
-  const labelHi = pad.top + innerH - 4
 
   const xPos = (i: number) => {
     if (xs.length <= 1) return pad.left + innerW / 2
@@ -321,70 +317,37 @@ function CityCrossLineChart({
   }
   const yPos = (value: number) => pad.top + innerH - (value / yMax) * innerH
 
-  // Posição real das bolinhas/linhas (sem distorcer o cruzamento).
   const pointY: number[][] = series.map((s) =>
     s.points.map((p) => yPos(p.acumuladoN)),
   )
 
-  // Números: empilha acima/abaixo por ranking e resolve colisões.
-  const labelY: number[][] = xs.map((_, day) => {
-    const items = series
-      .map((s, si) => ({
-        si,
-        v: s.points[day]?.acumuladoN ?? 0,
-        cy: pointY[si][day],
-      }))
-      .sort((a, b) => a.v - b.v || a.si - b.si)
-
-    const n = items.length
-    const mid = Math.floor(n / 2)
-    const placed = items.map((it, rank) => {
-      // Metade inferior: números abaixo; metade superior: acima.
-      // Quanto mais extremo o ranking, maior o afastamento.
-      if (rank < mid) {
-        const step = mid - 1 - rank
-        return { ...it, ly: it.cy + labelClear + step * labelGap }
-      }
-      const step = rank - mid
-      return { ...it, ly: it.cy - labelClear - step * labelGap }
-    })
-
-    // Ajusta os que ficaram abaixo (crescente em Y = mais para baixo na tela).
-    const below = placed.filter((p) => p.ly >= p.cy).sort((a, b) => a.ly - b.ly)
-    for (let k = 0; k < below.length; k++) {
-      const minY = below[k].cy + labelClear
-      if (k === 0) below[k].ly = Math.max(minY, below[k].ly)
-      else below[k].ly = Math.max(below[k].ly, below[k - 1].ly + labelGap, minY)
-      below[k].ly = Math.min(labelHi, below[k].ly)
-    }
-    // Ajusta os que ficaram acima (decrescente em Y = mais para cima).
-    const above = placed.filter((p) => p.ly < p.cy).sort((a, b) => b.ly - a.ly)
-    for (let k = 0; k < above.length; k++) {
-      const maxY = above[k].cy - labelClear
-      if (k === 0) above[k].ly = Math.min(maxY, above[k].ly)
-      else above[k].ly = Math.min(above[k].ly, above[k - 1].ly - labelGap, maxY)
-      above[k].ly = Math.max(labelLo, above[k].ly)
-    }
-
-    // Se ainda colidem entre blocos acima/abaixo, empurra o bloco de baixo.
-    if (above.length && below.length) {
-      const lowestAbove = Math.max(...above.map((p) => p.ly))
-      const highestBelow = Math.min(...below.map((p) => p.ly))
-      if (highestBelow - lowestAbove < labelGap) {
-        const shift = labelGap - (highestBelow - lowestAbove)
-        for (const p of below) p.ly = Math.min(labelHi, p.ly + shift)
-      }
-    }
-
-    const out = new Array(series.length).fill(0)
-    for (const p of placed) out[p.si] = p.ly
-    return out
-  })
+  const hitHalf =
+    xs.length <= 1
+      ? innerW / 2
+      : Math.max(18, (xPos(1) - xPos(0)) / 2)
 
   const gridYs = [0, 0.25, 0.5, 0.75, 1].map((t) => t * yMax)
 
+  const tipRows =
+    hoverDay == null
+      ? []
+      : series
+          .map((s) => ({
+            city: s.city,
+            color: s.color,
+            n: s.points[hoverDay]?.acumuladoN ?? 0,
+            pct: s.points[hoverDay]?.pct ?? 0,
+          }))
+          .sort((a, b) => b.n - a.n || a.city.localeCompare(b.city))
+
+  const tipLeftPct =
+    hoverDay == null ? 50 : Math.min(78, Math.max(22, (xPos(hoverDay) / width) * 100))
+
   return (
-    <div className="acumulador-chart-wrap line-chart-wrap acum-chart">
+    <div
+      className="acumulador-chart-wrap line-chart-wrap acum-chart"
+      onMouseLeave={() => setHoverDay(null)}
+    >
       <svg
         className="line-chart acumulador-chart"
         viewBox={`0 0 ${width} ${height}`}
@@ -423,6 +386,16 @@ function CityCrossLineChart({
           </text>
         ))}
 
+        {hoverDay != null && (
+          <line
+            x1={xPos(hoverDay)}
+            x2={xPos(hoverDay)}
+            y1={pad.top}
+            y2={pad.top + innerH}
+            className="acum-hover-guide"
+          />
+        )}
+
         {series.map((s, si) => {
           const d = s.points
             .map((_, i) => `${i === 0 ? 'M' : 'L'} ${xPos(i)} ${pointY[si][i]}`)
@@ -438,41 +411,58 @@ function CityCrossLineChart({
                 strokeLinecap="round"
               />
               {s.points.map((p, i) => {
-                const cx = xPos(i)
-                const cy = pointY[si][i]
-                const ly = labelY[i][si]
+                const active = hoverDay === i
                 return (
-                  <g key={`${s.city}-${p.x}`}>
-                    <circle
-                      cx={cx}
-                      cy={cy}
-                      r={4.5}
-                      fill={s.color}
-                      stroke="#fff"
-                      strokeWidth={1.5}
-                    >
-                      <title>
-                        {s.city} · {p.x}: {formatN(p.acumuladoN)} acum. (
-                        {formatPctNum(p.pct)})
-                      </title>
-                    </circle>
-                    <text
-                      x={cx}
-                      y={ly}
-                      className="acum-point-label ir-day-halo"
-                      textAnchor="middle"
-                      dominantBaseline="middle"
-                      fill={s.color}
-                    >
-                      {formatN(p.acumuladoN)}
-                    </text>
-                  </g>
+                  <circle
+                    key={`${s.city}-${p.x}`}
+                    cx={xPos(i)}
+                    cy={pointY[si][i]}
+                    r={active ? 6 : 4.5}
+                    fill={s.color}
+                    stroke="#fff"
+                    strokeWidth={1.5}
+                    className={active ? 'acum-point-active' : undefined}
+                  />
                 )
               })}
             </g>
           )
         })}
+
+        {xs.map((_, i) => (
+          <rect
+            key={`hit-${i}`}
+            x={xPos(i) - hitHalf}
+            y={pad.top}
+            width={hitHalf * 2}
+            height={innerH}
+            fill="transparent"
+            className="acum-day-hit"
+            onMouseEnter={() => setHoverDay(i)}
+          />
+        ))}
       </svg>
+
+      {hoverDay != null && tipRows.length > 0 && (
+        <div
+          className="acum-hover-card"
+          style={{ left: `${tipLeftPct}%` }}
+          role="tooltip"
+        >
+          <p className="acum-hover-card-title">Onda {xs[hoverDay]}</p>
+          <ul>
+            {tipRows.map((r) => (
+              <li key={r.city}>
+                <span className="line-swatch" style={{ background: r.color }} />
+                <span className="acum-hover-city">{r.city}</span>
+                <strong>{formatN(r.n)}</strong>
+                <em>{formatPctNum(r.pct)}</em>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <ul className="acum-city-legend acumulador-chart-legend">
         {series.map((s) => {
           const last = s.points[s.points.length - 1]
