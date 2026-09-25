@@ -3205,6 +3205,41 @@ tr.is-sel {
   background: #fff;
 }
 
+.acum-wave-th {
+  white-space: normal;
+  line-height: 1.25;
+  min-width: 4.5rem;
+  vertical-align: bottom;
+}
+
+.acum-wave-th .acum-wave-name,
+.acum-wave-th .acum-wave-dates {
+  display: block;
+}
+
+.acum-wave-th .acum-wave-name {
+  font-weight: 750;
+  color: var(--ink);
+}
+
+.acum-wave-th .acum-wave-dates {
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.acum-axis-wave-name {
+  font-weight: 700;
+  fill: var(--ink);
+  font-size: 10px;
+}
+
+.acum-axis-wave-dates {
+  fill: var(--muted);
+  font-size: 9px;
+}
+
 .acumulador-chart-wrap {
   position: relative;
   width: 100%;

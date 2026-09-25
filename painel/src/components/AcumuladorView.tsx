@@ -31,6 +31,8 @@ const JERO_APOIOS_CANDS = ['Jerônimo Rodrigues', 'ACM Neto'] as const
 
 type CityPoint = {
   x: string
+  waveName: string
+  dates: string
   n: number
   total: number
   acumuladoN: number
@@ -56,6 +58,19 @@ function shortWaveLabel(label: string): string {
   return label.replace(/\./g, '/')
 }
 
+function waveNameForPoint(w: TimePoint): string {
+  const folha =
+    w.rows.find((r) => r.folha)?.folha ??
+    IR_WAVE_FOLHAS.flat().find((f) => w.id.includes(f))
+  if (folha) {
+    const idx = IR_WAVE_FOLHAS.findIndex((wave) =>
+      (wave as readonly string[]).includes(folha),
+    )
+    if (idx >= 0) return `Onda ${idx + 1}`
+  }
+  return ''
+}
+
 function candidateOptions(rows: Row[], fieldKey: string, fixed?: readonly string[]): string[] {
   if (fixed?.length) {
     return fixed.filter((c) => rows.some((r) => r[fieldKey] === c))
@@ -79,8 +94,12 @@ function buildCitySeries(
       const total = dayRows.length
       acumuladoN += n
       acumuladoTotal += total
+      const dates = shortWaveLabel(w.label)
+      const waveName = waveNameForPoint(w)
       return {
-        x: shortWaveLabel(w.label),
+        x: waveName ? `${waveName} · ${dates}` : dates,
+        waveName,
+        dates,
         n,
         total,
         acumuladoN,
@@ -235,8 +254,15 @@ function AcumuladorRace({
             <tr>
               <th>Município</th>
               {series[0]?.points.map((p) => (
-                <th key={p.x} className="num">
-                  Acum. {p.x}
+                <th key={p.x} className="num acum-wave-th">
+                  {p.waveName ? (
+                    <>
+                      <span className="acum-wave-name">{p.waveName}</span>
+                      <span className="acum-wave-dates">{p.dates}</span>
+                    </>
+                  ) : (
+                    <>Acum. {p.dates}</>
+                  )}
                 </th>
               ))}
               <th className="num">Total</th>
@@ -300,20 +326,20 @@ function CityCrossLineChart({
     return <p className="empty-filter">Sem dados para {candidate}.</p>
   }
 
-  const xs = series[0].points.map((p) => p.x)
-  const pad = { top: 28, right: 52, bottom: 48, left: 52 }
+  const axisPoints = series[0].points
+  const pad = { top: 28, right: 52, bottom: 58, left: 52 }
   const width = 960
-  const height = 400
+  const height = 410
   const innerW = width - pad.left - pad.right
   const innerH = height - pad.top - pad.bottom
   const maxY = Math.max(1, ...series.flatMap((s) => s.points.map((p) => p.acumuladoN)))
   const yMax = Math.ceil(maxY / 50) * 50 || 50
 
   const xPos = (i: number) => {
-    if (xs.length <= 1) return pad.left + innerW / 2
+    if (axisPoints.length <= 1) return pad.left + innerW / 2
     const edge = Math.min(52, innerW * 0.1)
     const usable = innerW - edge * 2
-    return pad.left + edge + (i / (xs.length - 1)) * usable
+    return pad.left + edge + (i / (axisPoints.length - 1)) * usable
   }
   const yPos = (value: number) => pad.top + innerH - (value / yMax) * innerH
 
@@ -322,7 +348,7 @@ function CityCrossLineChart({
   )
 
   const hitHalf =
-    xs.length <= 1
+    axisPoints.length <= 1
       ? innerW / 2
       : Math.max(18, (xPos(1) - xPos(0)) / 2)
 
@@ -374,15 +400,26 @@ function CityCrossLineChart({
           </g>
         ))}
 
-        {xs.map((label, i) => (
+        {axisPoints.map((p, i) => (
           <text
-            key={label}
+            key={p.x}
             x={xPos(i)}
-            y={height - 14}
-            className="line-axis"
+            y={height - 28}
+            className="line-axis acum-axis-wave"
             textAnchor="middle"
           >
-            {label}
+            {p.waveName ? (
+              <>
+                <tspan x={xPos(i)} dy="0" className="acum-axis-wave-name">
+                  {p.waveName}
+                </tspan>
+                <tspan x={xPos(i)} dy="12" className="acum-axis-wave-dates">
+                  {p.dates}
+                </tspan>
+              </>
+            ) : (
+              p.dates
+            )}
           </text>
         ))}
 
@@ -429,7 +466,7 @@ function CityCrossLineChart({
           )
         })}
 
-        {xs.map((_, i) => (
+        {axisPoints.map((_, i) => (
           <rect
             key={`hit-${i}`}
             x={xPos(i) - hitHalf}
@@ -449,7 +486,11 @@ function CityCrossLineChart({
           style={{ left: `${tipLeftPct}%` }}
           role="tooltip"
         >
-          <p className="acum-hover-card-title">Onda {xs[hoverDay]}</p>
+          <p className="acum-hover-card-title">
+            {axisPoints[hoverDay].waveName
+              ? `${axisPoints[hoverDay].waveName} · ${axisPoints[hoverDay].dates}`
+              : axisPoints[hoverDay].dates}
+          </p>
           <ul>
             {tipRows.map((r) => (
               <li key={r.city}>
