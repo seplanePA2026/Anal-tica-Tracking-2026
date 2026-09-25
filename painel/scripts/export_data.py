@@ -31,6 +31,7 @@ EXTRA_DAYS = [
     ROOT / "21.09.xlsx",
     ROOT / "22.09.xlsx",
     ROOT / "23.09.xlsx",
+    ROOT / "24.09.xlsx",
 ]
 SOURCE = ROOT / "BD Pesquisa_Estadual_Bahia_26_oficial.xlsx"
 # Local machines sometimes only keep the consolidated daily workbooks.
@@ -193,14 +194,21 @@ def load_workbook(path: Path) -> list[tuple[str, str, pd.DataFrame]]:
     if not path.exists():
         raise SystemExit(f"Planilha não encontrada: {path}")
     out: list[tuple[str, str, pd.DataFrame]] = []
+    file_folha = path.stem.strip()
+    file_is_day = bool(re.match(r"^\d{2}\.\d{2}$", file_folha))
     for sheet in pd.ExcelFile(path).sheet_names:
         if sheet.strip().lower() == "excluido":
             continue
         label = folha_label(sheet)
-        # Skip auxiliary tabs (e.g. cotas) that are not field-day sheets.
+        # Skip auxiliary tabs (e.g. cotas). Misnamed day tabs in a DD.MM.xlsx
+        # workbook (e.g. Planilha1 in 24.09.xlsx) inherit the file date.
         if not re.match(r"^\d{2}\.\d{2}$", label):
-            print(f"aviso: ignorando aba auxiliar {path.name}/{sheet}")
-            continue
+            if file_is_day and sheet.strip().lower().startswith("planilha"):
+                print(f"aviso: aba {path.name}/{sheet} tratada como folha {file_folha}")
+                label = file_folha
+            else:
+                print(f"aviso: ignorando aba auxiliar {path.name}/{sheet}")
+                continue
         df = strip_frame(pd.read_excel(path, sheet_name=sheet, dtype=object))
         df["__folha"] = label
         out.append((path.name, sheet, df))
