@@ -299,45 +299,87 @@ function CityCrossLineChart({
   }
 
   const xs = series[0].points.map((p) => p.x)
-  const pad = { top: 28, right: 56, bottom: 44, left: 48 }
+  const pad = { top: 44, right: 52, bottom: 48, left: 52 }
   const width = 960
-  const height = 360
+  const height = 420
   const innerW = width - pad.left - pad.right
   const innerH = height - pad.top - pad.bottom
   const maxY = Math.max(1, ...series.flatMap((s) => s.points.map((p) => p.acumuladoN)))
   const yMax = Math.ceil(maxY / 50) * 50 || 50
-  const minGap = 18
-  const yLo = pad.top + 14
-  const yHi = pad.top + innerH - 10
+  /** Distância mínima do número ao centro da bolinha. */
+  const labelClear = 16
+  /** Distância mínima entre números no mesmo dia. */
+  const labelGap = 15
+  const labelLo = pad.top + 10
+  const labelHi = pad.top + innerH - 4
 
   const xPos = (i: number) => {
     if (xs.length <= 1) return pad.left + innerW / 2
-    const edge = Math.min(48, innerW * 0.08)
+    const edge = Math.min(52, innerW * 0.1)
     const usable = innerW - edge * 2
     return pad.left + edge + (i / (xs.length - 1)) * usable
   }
   const yPos = (value: number) => pad.top + innerH - (value / yMax) * innerH
 
-  const displayY: number[][] = series.map((s) =>
+  // Posição real das bolinhas/linhas (sem distorcer o cruzamento).
+  const pointY: number[][] = series.map((s) =>
     s.points.map((p) => yPos(p.acumuladoN)),
   )
-  for (let day = 0; day < xs.length; day++) {
-    const items = series.map((s, si) => ({
-      si,
-      v: s.points[day]?.acumuladoN ?? 0,
-      y: displayY[si][day],
-    }))
-    items.sort((a, b) => a.v - b.v || a.si - b.si)
-    for (let k = 0; k < items.length; k++) {
-      if (k === 0) items[k].y = Math.min(yHi, items[k].y)
-      else items[k].y = Math.min(items[k].y, items[k - 1].y - minGap)
+
+  // Números: empilha acima/abaixo por ranking e resolve colisões.
+  const labelY: number[][] = xs.map((_, day) => {
+    const items = series
+      .map((s, si) => ({
+        si,
+        v: s.points[day]?.acumuladoN ?? 0,
+        cy: pointY[si][day],
+      }))
+      .sort((a, b) => a.v - b.v || a.si - b.si)
+
+    const n = items.length
+    const mid = Math.floor(n / 2)
+    const placed = items.map((it, rank) => {
+      // Metade inferior: números abaixo; metade superior: acima.
+      // Quanto mais extremo o ranking, maior o afastamento.
+      if (rank < mid) {
+        const step = mid - 1 - rank
+        return { ...it, ly: it.cy + labelClear + step * labelGap }
+      }
+      const step = rank - mid
+      return { ...it, ly: it.cy - labelClear - step * labelGap }
+    })
+
+    // Ajusta os que ficaram abaixo (crescente em Y = mais para baixo na tela).
+    const below = placed.filter((p) => p.ly >= p.cy).sort((a, b) => a.ly - b.ly)
+    for (let k = 0; k < below.length; k++) {
+      const minY = below[k].cy + labelClear
+      if (k === 0) below[k].ly = Math.max(minY, below[k].ly)
+      else below[k].ly = Math.max(below[k].ly, below[k - 1].ly + labelGap, minY)
+      below[k].ly = Math.min(labelHi, below[k].ly)
     }
-    for (let k = items.length - 1; k >= 0; k--) {
-      if (k === items.length - 1) items[k].y = Math.max(yLo, items[k].y)
-      else items[k].y = Math.max(items[k].y, items[k + 1].y + minGap)
+    // Ajusta os que ficaram acima (decrescente em Y = mais para cima).
+    const above = placed.filter((p) => p.ly < p.cy).sort((a, b) => b.ly - a.ly)
+    for (let k = 0; k < above.length; k++) {
+      const maxY = above[k].cy - labelClear
+      if (k === 0) above[k].ly = Math.min(maxY, above[k].ly)
+      else above[k].ly = Math.min(above[k].ly, above[k - 1].ly - labelGap, maxY)
+      above[k].ly = Math.max(labelLo, above[k].ly)
     }
-    for (const it of items) displayY[it.si][day] = it.y
-  }
+
+    // Se ainda colidem entre blocos acima/abaixo, empurra o bloco de baixo.
+    if (above.length && below.length) {
+      const lowestAbove = Math.max(...above.map((p) => p.ly))
+      const highestBelow = Math.min(...below.map((p) => p.ly))
+      if (highestBelow - lowestAbove < labelGap) {
+        const shift = labelGap - (highestBelow - lowestAbove)
+        for (const p of below) p.ly = Math.min(labelHi, p.ly + shift)
+      }
+    }
+
+    const out = new Array(series.length).fill(0)
+    for (const p of placed) out[p.si] = p.ly
+    return out
+  })
 
   const gridYs = [0, 0.25, 0.5, 0.75, 1].map((t) => t * yMax)
 
@@ -383,7 +425,7 @@ function CityCrossLineChart({
 
         {series.map((s, si) => {
           const d = s.points
-            .map((_, i) => `${i === 0 ? 'M' : 'L'} ${xPos(i)} ${displayY[si][i]}`)
+            .map((_, i) => `${i === 0 ? 'M' : 'L'} ${xPos(i)} ${pointY[si][i]}`)
             .join(' ')
           return (
             <g key={s.city}>
@@ -397,7 +439,8 @@ function CityCrossLineChart({
               />
               {s.points.map((p, i) => {
                 const cx = xPos(i)
-                const cy = displayY[si][i]
+                const cy = pointY[si][i]
+                const ly = labelY[i][si]
                 return (
                   <g key={`${s.city}-${p.x}`}>
                     <circle
@@ -415,9 +458,10 @@ function CityCrossLineChart({
                     </circle>
                     <text
                       x={cx}
-                      y={cy - 10}
+                      y={ly}
                       className="acum-point-label ir-day-halo"
                       textAnchor="middle"
+                      dominantBaseline="middle"
                       fill={s.color}
                     >
                       {formatN(p.acumuladoN)}
