@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { isCandidateLabel } from '../intencaoRejeicao'
 import { countBy, formatN, formatPctNum } from '../stats'
 import { IR_WAVE_FOLHAS, temporalIrPoints, type TimePoint } from '../temporal'
@@ -28,6 +28,7 @@ const PRESIDENT_FIELD = 'ESTIMULADA PRESIDENTE'
 const GOVERNOR_FIELD = 'ESTIMULADA GOVERNADOR'
 const JERO_APOIOS_FIELD = 'JEROXACM com apoios'
 const JERO_APOIOS_CANDS = ['Jerônimo Rodrigues', 'ACM Neto'] as const
+const MAX_CROSS = 4
 
 type CityPoint = {
   x: string
@@ -71,9 +72,22 @@ function waveNameForPoint(w: TimePoint): string {
   return ''
 }
 
-function candidateOptions(rows: Row[], fieldKey: string, fixed?: readonly string[]): string[] {
+/** Candidatos ordenados do maior para o menor (n no recorte). */
+function candidateOptions(
+  rows: Row[],
+  fieldKey: string,
+  fixed?: readonly string[],
+): string[] {
   if (fixed?.length) {
-    return fixed.filter((c) => rows.some((r) => r[fieldKey] === c))
+    const ranked = countBy(rows, fieldKey).rows
+    const order = new Map(ranked.map((r, i) => [r.label, i]))
+    return fixed
+      .filter((c) => rows.some((r) => r[fieldKey] === c))
+      .sort(
+        (a, b) =>
+          (order.get(a) ?? 999) - (order.get(b) ?? 999) ||
+          a.localeCompare(b, 'pt-BR'),
+      )
   }
   return countBy(rows, fieldKey)
     .rows.filter((r) => isCandidateLabel(r.label))
@@ -115,6 +129,14 @@ function buildCitySeries(
   })
 }
 
+function seriesYMax(series: CitySeries[]): number {
+  const maxY = Math.max(
+    1,
+    ...series.flatMap((s) => s.points.map((p) => p.acumuladoN)),
+  )
+  return Math.ceil(maxY / 50) * 50 || 50
+}
+
 export function AcumuladorView({ rows }: Props) {
   const cityRows = useMemo(
     () =>
@@ -145,8 +167,8 @@ export function AcumuladorView({ rows }: Props) {
           <p className="lede">
             {formatN(cityRows.length)} entrevistas em Salvador, Feira de Santana,
             Vitória da Conquista, Camaçari e Lauro de Freitas ·{' '}
-            {IR_WAVE_FOLHAS.length} ondas. Linhas partem do acumulado inicial e
-            mostram o crescimento por município.
+            {IR_WAVE_FOLHAS.length} ondas. Os dois maiores candidatos abrem
+            lado a lado; use as abas para cruzar até {MAX_CROSS} nomes.
           </p>
         </div>
       </header>
@@ -201,21 +223,67 @@ function AcumuladorRace({
     () => candidateOptions(rows, fieldKey, fixedCandidates),
     [rows, fieldKey, fixedCandidates],
   )
-  const [candidate, setCandidate] = useState(options[0] ?? '')
+  const [selected, setSelected] = useState<string[]>([])
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const pickerRef = useRef<HTMLDivElement>(null)
 
-  const active = options.includes(candidate) ? candidate : (options[0] ?? '')
-  const series = useMemo(
-    () => (active ? buildCitySeries(fieldKey, active, waves) : []),
-    [fieldKey, active, waves],
+  useEffect(() => {
+    setSelected((prev) => {
+      const valid = prev.filter((c) => options.includes(c))
+      if (valid.length >= 1) return valid
+      return options.slice(0, Math.min(2, options.length))
+    })
+  }, [options])
+
+  useEffect(() => {
+    if (!pickerOpen) return
+    const onDoc = (e: MouseEvent) => {
+      if (!pickerRef.current?.contains(e.target as Node)) setPickerOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPickerOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDoc)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [pickerOpen])
+
+  const active = useMemo(() => {
+    const valid = selected.filter((c) => options.includes(c))
+    if (valid.length) return valid
+    return options.slice(0, Math.min(2, options.length))
+  }, [selected, options])
+
+  const panels = useMemo(
+    () =>
+      active.map((cand) => ({
+        candidate: cand,
+        series: buildCitySeries(fieldKey, cand, waves),
+      })),
+    [active, fieldKey, waves],
   )
 
-  const waveBaseAcum = useMemo(() => {
-    if (!series.length) return [] as { x: string; acumulado: number }[]
-    return series[0].points.map((_, wi) => ({
-      x: series[0].points[wi].x,
-      acumulado: series.reduce((s, city) => s + city.points[wi].acumuladoTotal, 0),
-    }))
-  }, [series])
+  const sharedYMax = useMemo(
+    () => Math.max(50, ...panels.map((p) => seriesYMax(p.series))),
+    [panels],
+  )
+
+  function toggleCandidate(name: string) {
+    setSelected((prev) => {
+      const base = (prev.length ? prev : active).filter((c) =>
+        options.includes(c),
+      )
+      if (base.includes(name)) {
+        if (base.length <= 1) return base
+        return base.filter((c) => c !== name)
+      }
+      if (base.length >= MAX_CROSS) return [...base.slice(1), name]
+      return [...base, name]
+    })
+  }
 
   if (!options.length) {
     return (
@@ -232,22 +300,108 @@ function AcumuladorRace({
         <div>
           <h3>{title}</h3>
           <p className="temporal-acumulado-lede">
-            Evolução do acumulado de intenções por município (ondas). Use o filtro
-            para trocar o candidato.
+            Comparativo acumulado por município (ondas). Escala Y compartilhada
+            entre os painéis.
           </p>
         </div>
-        <label className="acumulador-cand-filter">
-          Candidato
-          <select value={active} onChange={(e) => setCandidate(e.target.value)}>
-            {options.map((o) => (
-              <option key={o} value={o}>
-                {o}
-              </option>
+
+        <div className="acum-cand-picker" ref={pickerRef}>
+          <span className="acum-cand-picker-label">Cruzar candidatos</span>
+          <div className="acum-cand-tabs" role="tablist" aria-label="Candidatos ativos">
+            {active.map((c) => (
+              <button
+                key={c}
+                type="button"
+                role="tab"
+                aria-selected="true"
+                className="acum-cand-tab on"
+                onClick={() => setPickerOpen((o) => !o)}
+              >
+                {c}
+              </button>
             ))}
-          </select>
-        </label>
+            <button
+              type="button"
+              className={`acum-cand-tab acum-cand-tab-more${pickerOpen ? ' on' : ''}`}
+              aria-expanded={pickerOpen}
+              aria-haspopup="listbox"
+              onClick={() => setPickerOpen((o) => !o)}
+            >
+              + Cruzar
+            </button>
+          </div>
+
+          {pickerOpen && (
+            <div className="acum-cand-menu" role="listbox" aria-multiselectable="true">
+              <p className="acum-cand-menu-hint">
+                Selecione até {MAX_CROSS} · os dois maiores já vêm marcados
+              </p>
+              <ul>
+                {options.map((o, i) => {
+                  const on = active.includes(o)
+                  return (
+                    <li key={o}>
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={on}
+                        className={`acum-cand-option${on ? ' on' : ''}`}
+                        onClick={() => toggleCandidate(o)}
+                      >
+                        <span className="acum-cand-check" aria-hidden="true">
+                          {on ? '✓' : ''}
+                        </span>
+                        <span className="acum-cand-option-name">{o}</span>
+                        {i < 2 && (
+                          <em className="acum-cand-rank">Top {i + 1}</em>
+                        )}
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          )}
+        </div>
       </div>
-      <CityCrossLineChart series={series} candidate={active} />
+
+      <div
+        className={`acum-compare-grid acum-compare-n${Math.min(panels.length, 3)}`}
+      >
+        {panels.map((panel) => (
+          <CandidatePanel
+            key={panel.candidate}
+            candidate={panel.candidate}
+            series={panel.series}
+            yMax={sharedYMax}
+          />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function CandidatePanel({
+  candidate,
+  series,
+  yMax,
+}: {
+  candidate: string
+  series: CitySeries[]
+  yMax: number
+}) {
+  const waveBaseAcum = useMemo(() => {
+    if (!series.length) return [] as { x: string; acumulado: number }[]
+    return series[0].points.map((_, wi) => ({
+      x: series[0].points[wi].x,
+      acumulado: series.reduce((s, city) => s + city.points[wi].acumuladoTotal, 0),
+    }))
+  }, [series])
+
+  return (
+    <div className="acum-compare-panel">
+      <h4 className="acum-compare-title">{candidate}</h4>
+      <CityCrossLineChart series={series} candidate={candidate} yMax={yMax} />
       <div className="table-scroll acum-table acum-table-compact">
         <table>
           <thead>
@@ -309,16 +463,18 @@ function AcumuladorRace({
           </tfoot>
         </table>
       </div>
-    </section>
+    </div>
   )
 }
 
 function CityCrossLineChart({
   series,
   candidate,
+  yMax: yMaxProp,
 }: {
   series: CitySeries[]
   candidate: string
+  yMax?: number
 }) {
   const [hoverDay, setHoverDay] = useState<number | null>(null)
 
@@ -327,17 +483,16 @@ function CityCrossLineChart({
   }
 
   const axisPoints = series[0].points
-  const pad = { top: 28, right: 52, bottom: 58, left: 52 }
-  const width = 960
-  const height = 410
+  const pad = { top: 24, right: 36, bottom: 54, left: 44 }
+  const width = 640
+  const height = 340
   const innerW = width - pad.left - pad.right
   const innerH = height - pad.top - pad.bottom
-  const maxY = Math.max(1, ...series.flatMap((s) => s.points.map((p) => p.acumuladoN)))
-  const yMax = Math.ceil(maxY / 50) * 50 || 50
+  const yMax = yMaxProp ?? seriesYMax(series)
 
   const xPos = (i: number) => {
     if (axisPoints.length <= 1) return pad.left + innerW / 2
-    const edge = Math.min(52, innerW * 0.1)
+    const edge = Math.min(36, innerW * 0.08)
     const usable = innerW - edge * 2
     return pad.left + edge + (i / (axisPoints.length - 1)) * usable
   }
@@ -350,7 +505,7 @@ function CityCrossLineChart({
   const hitHalf =
     axisPoints.length <= 1
       ? innerW / 2
-      : Math.max(18, (xPos(1) - xPos(0)) / 2)
+      : Math.max(14, (xPos(1) - xPos(0)) / 2)
 
   const gridYs = [0, 0.25, 0.5, 0.75, 1].map((t) => t * yMax)
 
@@ -487,6 +642,7 @@ function CityCrossLineChart({
           role="tooltip"
         >
           <p className="acum-hover-card-title">
+            {candidate} ·{' '}
             {axisPoints[hoverDay].waveName
               ? `${axisPoints[hoverDay].waveName} · ${axisPoints[hoverDay].dates}`
               : axisPoints[hoverDay].dates}

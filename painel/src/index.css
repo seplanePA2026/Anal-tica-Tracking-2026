@@ -3205,6 +3205,208 @@ tr.is-sel {
   background: #fff;
 }
 
+.acum-cand-picker {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  min-width: min(320px, 100%);
+}
+
+.acum-cand-picker-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.acum-cand-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.acum-cand-tab {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  padding: 8px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.acum-cand-tab.on {
+  border-color: #c4b5fd;
+  background: #f5f0ff;
+  color: #5b21b6;
+}
+
+.acum-cand-tab-more {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.acum-cand-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  width: min(320px, 92vw);
+  max-height: 320px;
+  overflow: auto;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid #e8e0f2;
+  background: #fff;
+  box-shadow: 0 12px 32px rgba(40, 20, 70, 0.14);
+}
+
+.acum-cand-menu-hint {
+  margin: 0 6px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.acum-cand-menu ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.acum-cand-option {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 18px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  padding: 9px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.acum-cand-option:hover {
+  background: #f7f3fc;
+}
+
+.acum-cand-option.on {
+  background: #f3eefe;
+  color: #5b21b6;
+}
+
+.acum-cand-check {
+  width: 18px;
+  text-align: center;
+  font-weight: 800;
+  color: #7c3aed;
+}
+
+.acum-cand-option-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.acum-cand-rank {
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.acum-compare-grid {
+  display: grid;
+  gap: 18px;
+  width: 100%;
+}
+
+.acum-compare-n1 {
+  grid-template-columns: 1fr;
+}
+
+.acum-compare-n2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.acum-compare-n3 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.acum-compare-panel {
+  min-width: 0;
+  padding: 12px 12px 8px;
+  border: 1px solid #efeaf6;
+  border-radius: 14px;
+  background: #fbfaff;
+}
+
+.acum-compare-title {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 750;
+  color: var(--ink);
+}
+
+.acum-compare-panel .acumulador-chart {
+  min-height: 220px;
+}
+
+.acum-compare-panel .acumulador-chart-legend {
+  margin-top: 8px;
+  padding-top: 8px;
+}
+
+.acum-compare-panel .acum-table {
+  margin-top: 10px;
+}
+
+@media (max-width: 960px) {
+  .acum-compare-n2,
+  .acum-compare-n3 {
+    grid-template-columns: 1fr;
+  }
+
+  .acum-cand-picker {
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .acum-cand-tabs {
+    justify-content: flex-start;
+  }
+
+  .acum-cand-menu {
+    left: 0;
+    right: 0;
+    width: auto;
+  }
+}
+
 .acum-wave-th {
   white-space: normal;
   line-height: 1.25;
