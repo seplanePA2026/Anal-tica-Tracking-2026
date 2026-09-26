@@ -1,7 +1,14 @@
 import { useMemo, useState } from 'react'
 import { isCandidateLabel } from '../intencaoRejeicao'
 import { colorFor, countBy, formatN, formatPctNum } from '../stats'
-import { RESEARCH_WAVES, temporalPoints } from '../temporal'
+import {
+  RESEARCH_WAVES,
+  formatWavePointLabel,
+  shortWaveDateLabel,
+  temporalIrPoints,
+  waveNumberForPoint,
+  type TimePoint,
+} from '../temporal'
 import { ALL, type Row } from '../types'
 import { GenerateTemporalidadeReportModal } from './GenerateTemporalidadeReportModal'
 import { IntencaoRejeicaoPanel } from './IntencaoRejeicaoPanel'
@@ -15,14 +22,22 @@ const PRESIDENT_FIELD = 'ESTIMULADA PRESIDENTE'
 const GOVERNOR_FIELD = 'ESTIMULADA GOVERNADOR'
 const SENATOR_FIELD = 'ESTIMULADA SENADOR 1ª OPÇÃO'
 
+function waveParts(point: TimePoint): { waveName: string; dates: string; full: string } {
+  const dates = shortWaveDateLabel(point.label)
+  const n = waveNumberForPoint(point)
+  const waveName = n != null ? `Onda ${n}` : ''
+  return {
+    waveName,
+    dates,
+    full: formatWavePointLabel(point),
+  }
+}
+
 export function TemporalidadeView({ rows, municipalities }: Props) {
   const [pdfOpen, setPdfOpen] = useState(false)
   const wave = RESEARCH_WAVES[0]
-  const dayLabels = useMemo(() => {
-    const folhas = [
-      ...new Set(rows.map((r) => r.folha).filter(Boolean) as string[]),
-    ].sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }))
-    return folhas.map((f) => f.replace(/\./g, '/')).join(', ')
+  const waveLabels = useMemo(() => {
+    return temporalIrPoints(rows).map((p) => formatWavePointLabel(p)).join(', ')
   }, [rows])
 
   return (
@@ -57,7 +72,7 @@ export function TemporalidadeView({ rows, municipalities }: Props) {
           municipalities={municipalities}
           fieldKey={PRESIDENT_FIELD}
           title="Intenção de voto — presidente"
-          lede={`Cinco principais candidatos na estimulada a presidente, com linha de acumulado por candidato nos dias ${dayLabels}.`}
+          lede={`Cinco principais candidatos na estimulada a presidente, com linha de acumulado por onda (${waveLabels}).`}
           topN={5}
           compact
         />
@@ -66,7 +81,7 @@ export function TemporalidadeView({ rows, municipalities }: Props) {
           municipalities={municipalities}
           fieldKey={GOVERNOR_FIELD}
           title="Intenção de voto — governador"
-          lede={`Três principais candidatos na estimulada a governador, com linha de acumulado por candidato nos dias ${dayLabels}.`}
+          lede={`Três principais candidatos na estimulada a governador, com linha de acumulado por onda (${waveLabels}).`}
           topN={3}
           compact
         />
@@ -78,7 +93,7 @@ export function TemporalidadeView({ rows, municipalities }: Props) {
           municipalities={municipalities}
           fieldKey={SENATOR_FIELD}
           title="Intenção de voto — senador"
-          lede={`Seis principais candidatos na estimulada a senador (1ª opção), com linha de acumulado por candidato nos dias ${dayLabels}.`}
+          lede={`Seis principais candidatos na estimulada a senador (1ª opção), com linha de acumulado por onda (${waveLabels}).`}
           topN={6}
           compact
         />
@@ -86,10 +101,6 @@ export function TemporalidadeView({ rows, municipalities }: Props) {
       </div>
     </div>
   )
-}
-
-function dayDisplayLabel(folha: string): string {
-  return folha.replace(/\./g, '/')
 }
 
 function useMunicipioScope(rows: Row[], municipio: string) {
@@ -108,31 +119,34 @@ function TemporalAcumulado({
 }) {
   const [municipio, setMunicipio] = useState(ALL)
   const scoped = useMunicipioScope(rows, municipio)
-  const days = useMemo(() => temporalPoints(scoped), [scoped])
+  const waves = useMemo(() => temporalIrPoints(scoped), [scoped])
   const total = scoped.length
 
-  const dayRows = useMemo(() => {
+  const waveRows = useMemo(() => {
     let running = 0
-    return days.map((d) => {
+    return waves.map((d) => {
       const n = d.rows.length
       running += n
+      const parts = waveParts(d)
       return {
         id: d.id,
-        label: `Dia ${dayDisplayLabel(d.label)}`,
+        label: parts.full,
+        waveName: parts.waveName,
+        dates: parts.dates,
         n,
         pct: total ? (n / total) * 100 : 0,
         acumulado: running,
         color: undefined as string | undefined,
       }
     })
-  }, [days, total])
+  }, [waves, total])
 
   return (
     <section className="temporal-group temporal-acumulado temporal-intencao-card">
       <h3>Acumulado da pesquisa</h3>
       <p className="temporal-acumulado-lede">
-        Total consolidado e divisão das entrevistas por dia de campo na
-        Temporalidade (inclui dias que já saíram da janela tracking ativa).
+        Total consolidado e divisão das entrevistas por onda de campo na
+        Temporalidade (mesmo agrupamento do Acumulador).
       </p>
 
       <article className="temporal-mini">
@@ -152,13 +166,13 @@ function TemporalAcumulado({
                 : `Total acumulado em ${municipio}`
             }
             heroValue={total}
-            heroHint={`entrevistas · ${dayRows.length} ${
-              dayRows.length === 1 ? 'dia' : 'dias'
+            heroHint={`entrevistas · ${waveRows.length} ${
+              waveRows.length === 1 ? 'onda' : 'ondas'
             } de campo`}
-            items={dayRows}
-            itemKind="Dia"
-            chartAria="Total acumulado e entrevistas por dia"
-            barLegend="Entrevistas do dia"
+            items={waveRows}
+            itemKind="Onda"
+            chartAria="Total acumulado e entrevistas por onda"
+            barLegend="Entrevistas da onda"
             lineLegend="Total acumulado"
             defaultBarColor="#c4b5fd"
             lineColor="#7C4DFF"
@@ -191,7 +205,7 @@ function TemporalIntencaoCargo({
   const [municipio, setMunicipio] = useState(ALL)
   const scoped = useMunicipioScope(rows, municipio)
   const total = scoped.length
-  const days = useMemo(() => temporalPoints(scoped), [scoped])
+  const waves = useMemo(() => temporalIrPoints(scoped), [scoped])
 
   const topCandidates = useMemo(() => {
     const dist = countBy(scoped, fieldKey)
@@ -210,30 +224,40 @@ function TemporalIntencaoCargo({
   const series = useMemo(() => {
     return topCandidates.map((c) => {
       let running = 0
-      const points = days.map((d) => {
+      const points = waves.map((d) => {
         const n = d.rows.filter((r) => r[fieldKey] === c.label).length
         running += n
-        const dayTotal = d.rows.length || 1
+        const waveTotal = d.rows.length || 1
+        const parts = waveParts(d)
         return {
-          x: dayDisplayLabel(d.label),
+          x: parts.full,
+          waveName: parts.waveName,
+          dates: parts.dates,
           n,
           acumulado: running,
-          pctDia: (n / dayTotal) * 100,
+          pctDia: (n / waveTotal) * 100,
         }
       })
       return { ...c, points }
     })
-  }, [topCandidates, days, fieldKey])
+  }, [topCandidates, waves, fieldKey])
 
   const topSum = topCandidates.reduce((s, c) => s + c.n, 0)
 
-  const dayBaseAcum = useMemo(() => {
+  const waveBaseAcum = useMemo(() => {
     let running = 0
-    return days.map((d) => {
+    return waves.map((d) => {
       running += d.rows.length
-      return { id: d.id, label: dayDisplayLabel(d.label), acumulado: running }
+      const parts = waveParts(d)
+      return {
+        id: d.id,
+        label: parts.full,
+        waveName: parts.waveName,
+        dates: parts.dates,
+        acumulado: running,
+      }
     })
-  }, [days])
+  }, [waves])
 
   const gridClass =
     topN <= 3
@@ -288,11 +312,21 @@ function TemporalIntencaoCargo({
                 <thead>
                   <tr>
                     <th>Candidato</th>
-                    {days.map((d) => (
-                      <th key={d.id} className="num">
-                        Acum. {dayDisplayLabel(d.label)}
-                      </th>
-                    ))}
+                    {waves.map((d) => {
+                      const parts = waveParts(d)
+                      return (
+                        <th key={d.id} className="num acum-wave-th">
+                          {parts.waveName ? (
+                            <>
+                              <span className="acum-wave-name">{parts.waveName}</span>
+                              <span className="acum-wave-dates">{parts.dates}</span>
+                            </>
+                          ) : (
+                            <>Acum. {parts.dates}</>
+                          )}
+                        </th>
+                      )
+                    })}
                     <th className="num">Total</th>
                     <th className="num">% do total</th>
                   </tr>
@@ -314,7 +348,7 @@ function TemporalIntencaoCargo({
                 <tfoot>
                   <tr>
                     <th>Base (entrevistas)</th>
-                    {dayBaseAcum.map((d) => (
+                    {waveBaseAcum.map((d) => (
                       <th key={d.id} className="num">
                         {formatN(d.acumulado)}
                       </th>
@@ -334,6 +368,8 @@ function TemporalIntencaoCargo({
 
 type CandPoint = {
   x: string
+  waveName: string
+  dates: string
   n: number
   acumulado: number
   pctDia: number
@@ -358,26 +394,24 @@ function CandidateCumChart({
   if (!series.length || !series[0]?.points.length) return null
 
   const pad = compact
-    ? { top: 22, right: 44, bottom: 36, left: 18 }
-    : { top: 26, right: 56, bottom: 40, left: 20 }
+    ? { top: 22, right: 44, bottom: 48, left: 18 }
+    : { top: 26, right: 56, bottom: 52, left: 20 }
   const width = compact ? 640 : 920
-  const height = compact ? 260 : 320
+  const height = compact ? 270 : 330
   const innerW = width - pad.left - pad.right
   const innerH = height - pad.top - pad.bottom
-  const xs = series[0].points.map((p) => p.x)
+  const axisPoints = series[0].points
   const maxY = Math.max(1, ...series.flatMap((s) => s.points.map((p) => p.acumulado)))
   const yMax = Math.ceil(maxY / 50) * 50 || 50
-  /** Separação mínima entre pontos no mesmo dia. */
   const minGap = compact ? 20 : 24
   const yLo = pad.top + 16
   const yHi = pad.top + innerH - 10
 
   const xPos = (i: number) => {
-    if (xs.length <= 1) return pad.left + innerW / 2
-    // margens internas maiores = mais espaço entre 06/09, 07/09 e 08/09
+    if (axisPoints.length <= 1) return pad.left + innerW / 2
     const edge = Math.min(56, innerW * 0.12)
     const usable = innerW - edge * 2
-    return pad.left + edge + (i / (xs.length - 1)) * usable
+    return pad.left + edge + (i / (axisPoints.length - 1)) * usable
   }
   const yPos = (value: number) => pad.top + innerH - (value / yMax) * innerH
   const gridYs = [0, 0.5, 1].map((t) => t * yMax)
@@ -385,7 +419,7 @@ function CandidateCumChart({
   const displayY: number[][] = series.map((s) =>
     s.points.map((p) => yPos(p.acumulado)),
   )
-  for (let day = 0; day < xs.length; day++) {
+  for (let day = 0; day < axisPoints.length; day++) {
     const items = series.map((s, si) => ({
       si,
       v: s.points[day]?.acumulado ?? 0,
@@ -404,8 +438,7 @@ function CandidateCumChart({
     for (const it of items) displayY[it.si][day] = it.y
   }
 
-  /** Rank no dia (0 = menor) — define se o valor vai acima ou abaixo do ponto. */
-  const rankAtDay: number[][] = xs.map((_, day) => {
+  const rankAtDay: number[][] = axisPoints.map((_, day) => {
     const order = series
       .map((s, si) => ({ si, v: s.points[day]?.acumulado ?? 0 }))
       .sort((a, b) => a.v - b.v || a.si - b.si)
@@ -419,7 +452,6 @@ function CandidateCumChart({
   function labelPlacement(si: number, day: number, cx: number, cy: number) {
     const rank = rankAtDay[day][si]
     const isBottom = rank === 0
-    // Topo e meio: valor sempre acima. Só o mais baixo fica abaixo.
     if (isBottom) {
       return { x: cx, y: cy + 13, anchor: 'middle' as const }
     }
@@ -432,7 +464,7 @@ function CandidateCumChart({
         className="line-chart"
         viewBox={`0 0 ${width} ${height}`}
         role="img"
-        aria-label="Acumulado diário de intenção de voto por candidato"
+        aria-label="Acumulado por onda de intenção de voto por candidato"
       >
         {gridYs.map((g) => (
           <line
@@ -445,15 +477,26 @@ function CandidateCumChart({
           />
         ))}
 
-        {xs.map((label, i) => (
+        {axisPoints.map((p, i) => (
           <text
-            key={label}
+            key={p.x}
             x={xPos(i)}
-            y={height - 12}
-            className="line-axis"
+            y={height - 28}
+            className="line-axis acum-axis-wave"
             textAnchor="middle"
           >
-            {label}
+            {p.waveName ? (
+              <>
+                <tspan x={xPos(i)} dy="0" className="acum-axis-wave-name">
+                  {p.waveName}
+                </tspan>
+                <tspan x={xPos(i)} dy="12" className="acum-axis-wave-dates">
+                  {p.dates}
+                </tspan>
+              </>
+            ) : (
+              p.dates
+            )}
           </text>
         ))}
 
@@ -487,7 +530,7 @@ function CandidateCumChart({
                     >
                       <title>
                         {s.label} · {p.x}: acum. {formatN(p.acumulado)} (+
-                        {formatN(p.n)} no dia)
+                        {formatN(p.n)} na onda)
                       </title>
                     </circle>
                     <text
@@ -547,6 +590,8 @@ function MunicipioFilter({
 type AcumItem = {
   id: string
   label: string
+  waveName?: string
+  dates?: string
   n: number
   pct: number
   acumulado: number
@@ -661,28 +706,22 @@ function AcumuladoChart({
 }) {
   if (!items.length) return null
 
-  const pad = { top: 28, right: 28, bottom: 56, left: 52 }
+  const pad = { top: 28, right: 28, bottom: 58, left: 52 }
   const width = 720
-  const height = 280
+  const height = 290
   const innerW = width - pad.left - pad.right
   const innerH = height - pad.top - pad.bottom
   const maxBar = Math.max(1, ...items.map((d) => d.n), ...items.map((d) => d.acumulado))
-  const yMax = Math.ceil(Math.max(maxBar, total) / 100) * 100 || 100
-  const barGap = items.length > 3 ? 16 : 28
-  const barW = Math.min(
-    96,
-    Math.max(36, (innerW - barGap * (items.length - 1)) / items.length),
-  )
+  const yMax = Math.ceil(maxBar / 50) * 50 || 50
+  const barW = Math.min(36, (innerW / items.length) * 0.55)
 
   const xCenter = (i: number) => {
-    const span = items.length * barW + (items.length - 1) * barGap
-    const start = pad.left + (innerW - span) / 2
-    return start + i * (barW + barGap) + barW / 2
+    if (items.length <= 1) return pad.left + innerW / 2
+    return pad.left + (i + 0.5) * (innerW / items.length)
   }
-  const yPos = (value: number) => pad.top + innerH - (value / yMax) * innerH
-  const gridYs = [0, 0.25, 0.5, 0.75, 1].map((t) => t * yMax)
+  const yPos = (v: number) => pad.top + innerH - (v / yMax) * innerH
 
-  const cumPath = items
+  const linePath = items
     .map((d, i) => `${i === 0 ? 'M' : 'L'} ${xCenter(i)} ${yPos(d.acumulado)}`)
     .join(' ')
 
@@ -694,92 +733,99 @@ function AcumuladoChart({
         role="img"
         aria-label={ariaLabel}
       >
-        {gridYs.map((g) => (
-          <g key={g}>
-            <line
-              x1={pad.left}
-              x2={pad.left + innerW}
-              y1={yPos(g)}
-              y2={yPos(g)}
-              className="line-grid"
-            />
-            <text
-              x={pad.left - 8}
-              y={yPos(g) + 3}
-              className="line-axis"
-              textAnchor="end"
-            >
-              {formatN(Math.round(g))}
-            </text>
-          </g>
-        ))}
-
-        {items.map((d, i) => {
-          const cx = xCenter(i)
-          const top = yPos(d.n)
-          const h = Math.max(2, pad.top + innerH - top)
-          const fill = d.color ?? defaultBarColor
-          const short =
-            d.label.length > 18 ? `${d.label.slice(0, 16)}…` : d.label
+        {[0, 0.5, 1].map((t) => {
+          const g = t * yMax
           return (
-            <g key={`bar-${d.id}`}>
-              <rect
-                x={cx - barW / 2}
-                y={top}
-                width={barW}
-                height={h}
-                rx="8"
-                fill={fill}
-                opacity={0.85}
+            <g key={g}>
+              <line
+                x1={pad.left}
+                x2={pad.left + innerW}
+                y1={yPos(g)}
+                y2={yPos(g)}
+                className="line-grid"
               />
               <text
-                x={cx}
-                y={top - 8}
-                className="line-point-value"
-                textAnchor="middle"
+                x={pad.left - 8}
+                y={yPos(g) + 4}
+                className="line-axis"
+                textAnchor="end"
               >
-                {formatN(d.n)}
+                {formatN(g)}
               </text>
+            </g>
+          )
+        })}
+
+        {items.map((d, i) => {
+          const x = xCenter(i) - barW / 2
+          const y = yPos(d.n)
+          const h = pad.top + innerH - y
+          return (
+            <g key={d.id}>
+              <rect
+                x={x}
+                y={y}
+                width={barW}
+                height={Math.max(0, h)}
+                className="acum-bar"
+                fill={d.color ?? defaultBarColor}
+              >
+                <title>
+                  {d.label}: {formatN(d.n)} ({formatPctNum(d.pct)} de{' '}
+                  {formatN(total)})
+                </title>
+              </rect>
               <text
-                x={cx}
+                x={xCenter(i)}
                 y={height - 28}
-                className="line-axis acum-bar-label"
+                className="line-axis acum-axis-wave"
                 textAnchor="middle"
               >
-                {short}
+                {d.waveName ? (
+                  <>
+                    <tspan x={xCenter(i)} dy="0" className="acum-axis-wave-name">
+                      {d.waveName}
+                    </tspan>
+                    <tspan x={xCenter(i)} dy="12" className="acum-axis-wave-dates">
+                      {d.dates}
+                    </tspan>
+                  </>
+                ) : (
+                  d.label
+                )}
               </text>
             </g>
           )
         })}
 
         <path
-          d={cumPath}
+          d={linePath}
           fill="none"
           stroke={lineColor}
-          strokeWidth="2.75"
+          strokeWidth="2.25"
           strokeLinejoin="round"
           strokeLinecap="round"
         />
         {items.map((d, i) => (
-          <g key={`cum-${d.id}`}>
+          <g key={`pt-${d.id}`}>
             <circle
               cx={xCenter(i)}
               cy={yPos(d.acumulado)}
-              r="5.5"
+              r="4"
               fill={lineColor}
               stroke="#fff"
-              strokeWidth="2"
+              strokeWidth="1.5"
             >
               <title>
                 Acumulado até {d.label}: {formatN(d.acumulado)}
               </title>
             </circle>
             <text
-              x={xCenter(i) + 12}
+              x={xCenter(i)}
               y={yPos(d.acumulado) + 4}
               className="acum-cum-label"
-              textAnchor="start"
-              fill={lineColor}
+              textAnchor="middle"
+              dy="-12"
             >
               {formatN(d.acumulado)}
             </text>

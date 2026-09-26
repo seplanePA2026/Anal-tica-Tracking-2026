@@ -80,6 +80,37 @@ function irPointLabel(folhas: string[]): string {
   return `${folhas[0].replace(/\./g, '/')}–${folhas[folhas.length - 1].replace(/\./g, '/')}`
 }
 
+/** Encurta "06/09–08/09" → "6–8/09". */
+export function shortWaveDateLabel(label: string): string {
+  const range = label.match(
+    /^0?(\d{1,2})\/(\d{2})\s*[–-]\s*0?(\d{1,2})\/(\d{2})$/,
+  )
+  if (range) {
+    const [, d1, m1, d2, m2] = range
+    if (m1 === m2) return `${Number(d1)}–${Number(d2)}/${m1}`
+    return `${Number(d1)}/${m1}–${Number(d2)}/${m2}`
+  }
+  return label.replace(/\./g, '/')
+}
+
+export function waveNumberForPoint(point: TimePoint): number | null {
+  const folha =
+    point.rows.find((r) => r.folha)?.folha ??
+    IR_WAVE_FOLHAS.flat().find((f) => point.id.includes(f))
+  if (!folha) return null
+  const idx = IR_WAVE_FOLHAS.findIndex((w) =>
+    (w as readonly string[]).includes(folha),
+  )
+  return idx >= 0 ? idx + 1 : null
+}
+
+/** Ex.: "Onda 2 · 9–11/09" */
+export function formatWavePointLabel(point: TimePoint): string {
+  const dates = shortWaveDateLabel(point.label)
+  const n = waveNumberForPoint(point)
+  return n != null ? `Onda ${n} · ${dates}` : dates
+}
+
 export function temporalIrPoints(allRows: Row[]): TimePoint[] {
   const folhas = [...new Set(allRows.map((r) => r.folha).filter(Boolean) as string[])]
   folhas.sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }))

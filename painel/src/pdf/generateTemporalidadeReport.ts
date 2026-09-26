@@ -7,7 +7,7 @@ import {
   type IntentionRejectionRace,
 } from '../intencaoRejeicao'
 import { colorFor, formatN, formatPctNum } from '../stats'
-import { temporalIrPoints, temporalPoints } from '../temporal'
+import { temporalIrPoints, formatWavePointLabel } from '../temporal'
 import type { Row } from '../types'
 
 const PURPLE: [number, number, number] = [124, 58, 237]
@@ -47,10 +47,6 @@ function yieldFrame() {
   return new Promise<void>((resolve) => {
     window.setTimeout(resolve, 0)
   })
-}
-
-function dayLabel(folha: string): string {
-  return folha.replace(/\./g, '/')
 }
 
 function slug(text: string): string {
@@ -106,8 +102,8 @@ export async function generateTemporalidadePdf(
   const width = right - left
   const generated = new Date().toLocaleString('pt-BR')
   const scope = scopeLabel(spec)
-  const days = temporalPoints(rows)
-  const irDays = temporalIrPoints(rows)
+  const days = temporalIrPoints(rows)
+  const irDays = days
 
   const footer = () => {
     const page = doc.getNumberOfPages()
@@ -143,7 +139,7 @@ export async function generateTemporalidadePdf(
   doc.setTextColor(...MUTED)
   doc.text(
     `${formatN(rows.length)} entrevistas · ${days.length} ${
-      days.length === 1 ? 'dia' : 'dias'
+      days.length === 1 ? 'onda' : 'ondas'
     } de campo · gerado em ${generated}.`,
     left,
     80,
@@ -170,8 +166,8 @@ export async function generateTemporalidadePdf(
       ['Candidatos selecionados', formatN(nCand)],
       ['Entrevistas', formatN(rows.length)],
       [
-        'Dias de campo',
-        days.map((d) => dayLabel(d.label)).join(' · ') || '—',
+        'Ondas de campo',
+        days.map((d) => formatWavePointLabel(d)).join(' · ') || '—',
       ],
       [
         'Seções',
@@ -220,13 +216,13 @@ export async function generateTemporalidadePdf(
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(9)
     doc.setTextColor(...MUTED)
-    doc.text('Volume de entrevistas por dia de campo e total acumulado.', left, 25)
+    doc.text('Volume de entrevistas por onda de campo e total acumulado.', left, 25)
 
     let running = 0
     const body = days.map((d) => {
       running += d.rows.length
       return [
-        `Dia ${dayLabel(d.label)}`,
+        formatWavePointLabel(d),
         formatN(d.rows.length),
         formatPctNum(rows.length ? (d.rows.length / rows.length) * 100 : 0),
         formatN(running),
@@ -246,7 +242,7 @@ export async function generateTemporalidadePdf(
         2: { halign: 'right', cellWidth: 28 },
         3: { halign: 'right', cellWidth: 32 },
       },
-      head: [['Dia', 'N do dia', '% do total', 'Acumulado']],
+      head: [['Onda', 'N da onda', '% do total', 'Acumulado']],
       body: [
         ...body,
         ['Total (base)', formatN(rows.length), rows.length ? '100,0%' : '—', formatN(running)],
@@ -271,7 +267,7 @@ export async function generateTemporalidadePdf(
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(8)
       doc.setTextColor(...MUTED)
-      const irAxis = irDays.map((d) => d.label).join(' → ')
+      const irAxis = irDays.map((d) => formatWavePointLabel(d)).join(' → ')
       doc.text(`Pontos no tempo: ${irAxis || '—'}. Barras do recorte unificado.`, left, y)
       y += 6
 
@@ -378,7 +374,7 @@ async function drawCargoAcumulado(
   doc.setFontSize(8)
   doc.setTextColor(...MUTED)
   doc.text(
-    `Intenção estimulada. Linha de acumulado por candidato nos dias de campo. Base ${formatN(total)}.`,
+    `Intenção estimulada. Linha de acumulado por candidato nas ondas de campo. Base ${formatN(total)}.`,
     left,
     25,
   )
@@ -388,7 +384,7 @@ async function drawCargoAcumulado(
     const points = days.map((d) => {
       const n = d.rows.filter((r) => r[field] === name).length
       running += n
-      return { x: dayLabel(d.label), n, acumulado: running }
+      return { x: formatWavePointLabel(d), n, acumulado: running }
     })
     const n = running
     return {
@@ -400,7 +396,7 @@ async function drawCargoAcumulado(
     }
   })
 
-  const head = ['Candidato', ...days.map((d) => `Acum. ${dayLabel(d.label)}`), 'Total', '%']
+  const head = ['Candidato', ...days.map((d) => formatWavePointLabel(d)), 'Total', '%']
   const body = series.map((s) => [
     s.name,
     ...s.points.map((p) => formatN(p.acumulado)),
