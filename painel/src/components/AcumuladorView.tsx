@@ -28,7 +28,7 @@ const PRESIDENT_FIELD = 'ESTIMULADA PRESIDENTE'
 const GOVERNOR_FIELD = 'ESTIMULADA GOVERNADOR'
 const JERO_APOIOS_FIELD = 'JEROXACM com apoios'
 const JERO_APOIOS_CANDS = ['Jerônimo Rodrigues', 'ACM Neto'] as const
-const MAX_CROSS = 4
+const MAX_CROSS = 2
 
 type CityPoint = {
   x: string
@@ -168,7 +168,7 @@ export function AcumuladorView({ rows }: Props) {
             {formatN(cityRows.length)} entrevistas em Salvador, Feira de Santana,
             Vitória da Conquista, Camaçari e Lauro de Freitas ·{' '}
             {IR_WAVE_FOLHAS.length} ondas. Os dois maiores candidatos abrem
-            lado a lado; use as abas para cruzar até {MAX_CROSS} nomes.
+            lado a lado; use as abas para trocar o cruzamento (sempre 2).
           </p>
         </div>
       </header>
@@ -334,7 +334,7 @@ function AcumuladorRace({
           {pickerOpen && (
             <div className="acum-cand-menu" role="listbox" aria-multiselectable="true">
               <p className="acum-cand-menu-hint">
-                Selecione até {MAX_CROSS} · os dois maiores já vêm marcados
+                Só 2 por vez · ao marcar outro, o mais antigo sai
               </p>
               <ul>
                 {options.map((o, i) => {
