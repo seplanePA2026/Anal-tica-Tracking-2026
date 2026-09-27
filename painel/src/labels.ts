@@ -52,7 +52,7 @@ export const FIELD_LABELS: Record<string, FieldLabel> = {
   'CANDIDATO A GOV DE LULA': {
     code: '',
     title:
-      'Pelo que você sabe ou ouviu falar, quem vai ser o candidato apoiado pelo Lula para o governo do Estado da Bahia em 2026?',
+      'Pelo que você sabe ou ouviu falar, quem é o candidato apoiado pelo Lula para o governo do Estado da Bahia em 2026?',
     short: 'Candidato de Lula ao governo',
   },
   'CANDIDATO A GOV DE FLAVIO': {
