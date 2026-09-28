@@ -248,7 +248,11 @@ def main() -> None:
     for rec in raw[keep].to_dict(orient="records"):
         item = {"folha": cell(rec.pop("__folha"))}
         for k, v in rec.items():
-            item[k] = cell(v)
+            value = cell(v)
+            # Omit empty cells so the JSON stays under the Workers 25 MiB asset cap.
+            if value is None:
+                continue
+            item[k] = value
         rows.append(item)
 
     tracking_mask = raw["__folha"].isin(tracking_folhas)
