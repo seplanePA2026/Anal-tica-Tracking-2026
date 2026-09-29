@@ -23,6 +23,22 @@ import {
 } from './stats'
 import { availableOndas, findOnda, rowsForFolhas } from './ondas'
 
+async function loadDataset(): Promise<Dataset> {
+  const gz = await fetch('/data.json.gz')
+  const gzType = gz.headers.get('content-type') ?? ''
+  if (gz.ok && !gzType.includes('text/html')) {
+    const buf = await gz.arrayBuffer()
+    const bytes = new Uint8Array(buf)
+    const isGzip = bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b
+    if (!isGzip) return JSON.parse(new TextDecoder().decode(bytes)) as Dataset
+    const stream = new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'))
+    return new Response(stream).json() as Promise<Dataset>
+  }
+  const raw = await fetch('/data.json')
+  if (!raw.ok) throw new Error(`Falha ao ler data.json (${raw.status})`)
+  return raw.json() as Promise<Dataset>
+}
+
 export default function App() {
   const [data, setData] = useState<Dataset | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -92,12 +108,8 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    fetch('/data.json')
-      .then((r) => {
-        if (!r.ok) throw new Error(`Falha ao ler data.json (${r.status})`)
-        return r.json()
-      })
-      .then((json: Dataset) => setData(json))
+    loadDataset()
+      .then((json) => setData(json))
       .catch((e: Error) => setError(e.message))
   }, [])
 

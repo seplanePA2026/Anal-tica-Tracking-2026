@@ -9,7 +9,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "deploy": "npm run build && wrangler deploy",
+    "deploy": "npm run build && node scripts/gzip-data-asset.mjs && wrangler deploy",
     "cf-typegen": "wrangler types"
   },
   "dependencies": {
