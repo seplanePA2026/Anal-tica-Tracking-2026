@@ -71,6 +71,7 @@ export const IR_WAVE_FOLHAS: readonly (readonly string[])[] = [
   ['21.09', '22.09', '23.09'],
   ['24.09', '25.09', '26.09'],
   ['27.09', '28.09', '29.09'],
+  ['30.09'],
 ] as const
 
 /** @deprecated use IR_WAVE_FOLHAS[0] */
