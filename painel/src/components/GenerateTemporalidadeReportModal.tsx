@@ -9,6 +9,7 @@ import {
   type TemporalidadePdfInclude,
 } from '../pdf/generateTemporalidadeReport'
 import { formatN } from '../stats'
+import { compareFolhas } from '../temporal'
 import type { Row } from '../types'
 
 type Props = {
@@ -44,7 +45,7 @@ export function GenerateTemporalidadeReportModal({
   const dayLabels = useMemo(() => {
     const folhas = [
       ...new Set(rows.map((r) => r.folha).filter(Boolean) as string[]),
-    ].sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }))
+    ].sort(compareFolhas)
     return folhas.map((f) => f.replace(/\./g, '/'))
   }, [rows])
 

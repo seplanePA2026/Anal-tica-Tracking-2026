@@ -38,6 +38,7 @@ EXTRA_DAYS = [
     ROOT / "28.09.xlsx",
     ROOT / "29.09.xlsx",
     ROOT / "30.09.xlsx",
+    ROOT / "01.10.xlsx",
 ]
 SOURCE = ROOT / "BD Pesquisa_Estadual_Bahia_26_oficial.xlsx"
 # Local machines sometimes only keep the consolidated daily workbooks.
@@ -235,7 +236,7 @@ def main() -> None:
             continue
         by_folha[label] = (source_name, sheet, df)
 
-    folhas = sorted(by_folha.keys(), key=lambda s: [int(x) for x in s.split(".")])
+    folhas = sorted(by_folha.keys(), key=lambda s: (int(s.split(".")[1]), int(s.split(".")[0])))
     if not folhas:
         raise SystemExit("Nenhuma folha válida encontrada.")
 

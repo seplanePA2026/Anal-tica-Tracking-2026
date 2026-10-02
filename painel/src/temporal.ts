@@ -24,6 +24,13 @@ export type TimePoint = {
   rows: Row[]
 }
 
+/** Ordem de campo: mês e depois dia (01.10 vem depois de 30.09). */
+export function compareFolhas(a: string, b: string): number {
+  const [da, ma] = a.split('.').map(Number)
+  const [db, mb] = b.split('.').map(Number)
+  return ma - mb || da - db
+}
+
 /**
  * Pontos no eixo X da temporalidade.
  * Com uma onda só, usamos os dias de campo (folhas) para mostrar evolução interna.
@@ -41,7 +48,7 @@ export function temporalPoints(allRows: Row[], waves = RESEARCH_WAVES): TimePoin
   }
 
   const folhas = [...new Set(allRows.map((r) => r.folha).filter(Boolean) as string[])]
-  folhas.sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }))
+  folhas.sort(compareFolhas)
   if (!folhas.length) {
     return [
       {
@@ -71,7 +78,7 @@ export const IR_WAVE_FOLHAS: readonly (readonly string[])[] = [
   ['21.09', '22.09', '23.09'],
   ['24.09', '25.09', '26.09'],
   ['27.09', '28.09', '29.09'],
-  ['30.09'],
+  ['30.09', '01.10'],
 ] as const
 
 /** @deprecated use IR_WAVE_FOLHAS[0] */
@@ -115,7 +122,7 @@ export function formatWavePointLabel(point: TimePoint): string {
 
 export function temporalIrPoints(allRows: Row[]): TimePoint[] {
   const folhas = [...new Set(allRows.map((r) => r.folha).filter(Boolean) as string[])]
-  folhas.sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }))
+  folhas.sort(compareFolhas)
   if (!folhas.length) {
     return [{ id: 'unica', label: 'Pesquisa', rows: allRows }]
   }
