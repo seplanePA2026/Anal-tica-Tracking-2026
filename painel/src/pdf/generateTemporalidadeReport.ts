@@ -1,25 +1,22 @@
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { isCandidateLabel } from '../intencaoRejeicao'
+import { colorFor, countBy, formatN, formatPctNum } from '../stats'
 import {
-  candidateDaySeries,
-  candidateIntentionRejection,
-  INTENTION_REJECTION_RACES,
-  type IntentionRejectionRace,
-} from '../intencaoRejeicao'
-import { colorFor, formatN, formatPctNum } from '../stats'
-import { temporalIrPoints, formatWavePointLabel } from '../temporal'
+  shortWaveDateLabel,
+  temporalIrPoints,
+  waveNumberForPoint,
+  type TimePoint,
+} from '../temporal'
 import type { Row } from '../types'
 
 const PURPLE: [number, number, number] = [124, 58, 237]
 const INK: [number, number, number] = [27, 20, 48]
 const MUTED: [number, number, number] = [109, 100, 132]
 const LINE: [number, number, number] = [232, 226, 244]
-const GREEN: [number, number, number] = [46, 125, 50]
-const RED: [number, number, number] = [229, 57, 53]
+const PAPER: [number, number, number] = [250, 248, 253]
 
 export type TemporalidadePdfInclude = {
-  acumulado: boolean
-  intencaoRejeicao: boolean
   presidente: boolean
   governador: boolean
   senador: boolean
@@ -28,19 +25,43 @@ export type TemporalidadePdfInclude = {
 export type TemporalidadePdfSpec = {
   municipalities: string[]
   allMunicipalities: boolean
-  candidatesByRace: Record<string, string[]>
   include: TemporalidadePdfInclude
 }
 
-type DocWithTable = jsPDF & { lastAutoTable?: { finalY: number } }
+type CargoSpec = {
+  id: keyof TemporalidadePdfInclude
+  title: string
+  field: string
+  topN: number
+}
 
-function rgb(hex: string): [number, number, number] {
-  const h = hex.replace('#', '')
-  return [
-    parseInt(h.slice(0, 2), 16),
-    parseInt(h.slice(2, 4), 16),
-    parseInt(h.slice(4, 6), 16),
-  ]
+const CARGOS: CargoSpec[] = [
+  {
+    id: 'presidente',
+    title: 'Intenção de voto — presidente',
+    field: 'ESTIMULADA PRESIDENTE',
+    topN: 5,
+  },
+  {
+    id: 'governador',
+    title: 'Intenção de voto — governador',
+    field: 'ESTIMULADA GOVERNADOR',
+    topN: 3,
+  },
+  {
+    id: 'senador',
+    title: 'Intenção de voto — senador',
+    field: 'ESTIMULADA SENADOR 1ª OPÇÃO',
+    topN: 6,
+  },
+]
+
+type Series = {
+  name: string
+  color: string
+  n: number
+  pct: number
+  points: { wave: string; axis: string; n: number; acumulado: number }[]
 }
 
 function yieldFrame() {
@@ -58,6 +79,15 @@ function slug(text: string): string {
     .slice(0, 60)
 }
 
+function rgb(hex: string): [number, number, number] {
+  const h = hex.replace('#', '')
+  return [
+    parseInt(h.slice(0, 2), 16),
+    parseInt(h.slice(2, 4), 16),
+    parseInt(h.slice(4, 6), 16),
+  ]
+}
+
 function filterRows(allRows: Row[], spec: TemporalidadePdfSpec): Row[] {
   if (spec.allMunicipalities) return allRows
   const set = new Set(spec.municipalities)
@@ -71,445 +101,149 @@ function scopeLabel(spec: TemporalidadePdfSpec): string {
   return `${spec.municipalities.length} municípios selecionados`
 }
 
-function lastY(doc: jsPDF, fallback: number): number {
-  return (doc as DocWithTable).lastAutoTable?.finalY ?? fallback
+function waveAxis(point: TimePoint): string {
+  const n = waveNumberForPoint(point)
+  return n != null ? `Onda ${n}` : shortWaveDateLabel(point.label)
 }
 
-export async function generateTemporalidadePdf(
-  allRows: Row[],
-  spec: TemporalidadePdfSpec,
-) {
-  const rows = filterRows(allRows, spec)
-  if (!rows.length) {
-    throw new Error('Não há entrevistas neste recorte.')
-  }
-
-  const hasContent =
-    spec.include.acumulado ||
-    spec.include.intencaoRejeicao ||
-    spec.include.presidente ||
-    spec.include.governador ||
-    spec.include.senador
-  if (!hasContent) {
-    throw new Error('Selecione ao menos uma seção para o relatório.')
-  }
-
-  const doc = new jsPDF({ unit: 'mm', format: 'a4' })
-  const pageW = doc.internal.pageSize.getWidth()
-  const pageH = doc.internal.pageSize.getHeight()
-  const left = 14
-  const right = pageW - 14
-  const width = right - left
-  const generated = new Date().toLocaleString('pt-BR')
-  const scope = scopeLabel(spec)
-  const days = temporalIrPoints(rows)
-  const irDays = days
-
-  const footer = () => {
-    const page = doc.getNumberOfPages()
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(8)
-    doc.setTextColor(...MUTED)
-    doc.text(
-      `Analítica · Temporalidade · Pesquisa Tracking Estadual Bahia · ${scope}`,
-      left,
-      pageH - 8,
-    )
-    doc.text(String(page), right, pageH - 8, { align: 'right' })
-  }
-
-  doc.setFillColor(...PURPLE)
-  doc.rect(0, 0, pageW, 58, 'F')
-  doc.setTextColor(255, 255, 255)
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(12)
-  doc.text('ANALÍTICA', left, 18)
-  doc.setFontSize(20)
-  doc.text('Relatório de Temporalidade', left, 32)
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(11)
-  doc.text('Pesquisa Tracking Estadual Bahia', left, 42)
-
-  doc.setTextColor(...INK)
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(15)
-  doc.text(scope, left, 72)
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(10)
-  doc.setTextColor(...MUTED)
-  doc.text(
-    `${formatN(rows.length)} entrevistas · ${days.length} ${
-      days.length === 1 ? 'onda' : 'ondas'
-    } de campo · gerado em ${generated}.`,
-    left,
-    80,
-  )
-  doc.text('Contagens observadas, sem ponderação. Base de todos os dias da Temporalidade.', left, 86)
-
-  const nCand = INTENTION_REJECTION_RACES.reduce(
-    (s, race) => s + (spec.candidatesByRace[race.id]?.length ?? 0),
-    0,
-  )
-  autoTable(doc, {
-    startY: 94,
-    theme: 'plain',
-    styles: { font: 'helvetica', fontSize: 9, textColor: INK, cellPadding: 3 },
-    headStyles: {
-      fillColor: PURPLE,
-      textColor: [255, 255, 255],
-      fontStyle: 'bold',
-    },
-    columnStyles: { 1: { halign: 'right' } },
-    head: [['Recorte do relatório', 'Valor']],
-    body: [
-      ['Municípios', spec.allMunicipalities ? 'Todos (Bahia)' : formatN(spec.municipalities.length)],
-      ['Candidatos selecionados', formatN(nCand)],
-      ['Entrevistas', formatN(rows.length)],
-      [
-        'Ondas de campo',
-        days.map((d) => formatWavePointLabel(d)).join(' · ') || '—',
-      ],
-      [
-        'Seções',
-        [
-          spec.include.acumulado ? 'Acumulado' : null,
-          spec.include.intencaoRejeicao ? 'Intenção × rejeição' : null,
-          spec.include.presidente ? 'Presidente' : null,
-          spec.include.governador ? 'Governador' : null,
-          spec.include.senador ? 'Senador' : null,
-        ]
-          .filter(Boolean)
-          .join(' · '),
-      ],
-    ],
-    didDrawPage: footer,
-  })
-
-  if (!spec.allMunicipalities && spec.municipalities.length) {
-    autoTable(doc, {
-      startY: lastY(doc, 140) + 8,
-      theme: 'grid',
-      styles: { font: 'helvetica', fontSize: 8, textColor: INK, cellPadding: 2 },
-      headStyles: {
-        fillColor: PURPLE,
-        textColor: [255, 255, 255],
-        fontStyle: 'bold',
-      },
-      columnStyles: { 1: { halign: 'right', cellWidth: 28 } },
-      head: [['Município no recorte', 'N']],
-      body: spec.municipalities.map((name) => [
-        name,
-        formatN(rows.filter((r) => r['Municípios'] === name).length),
-      ]),
-      didDrawPage: footer,
-    })
-  }
-
-  if (spec.include.acumulado) {
-    await yieldFrame()
-    doc.addPage()
-    footer()
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(14)
-    doc.setTextColor(...PURPLE)
-    doc.text('Acumulado da pesquisa', left, 18)
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(9)
-    doc.setTextColor(...MUTED)
-    doc.text('Volume de entrevistas por onda de campo e total acumulado.', left, 25)
-
-    let running = 0
-    const body = days.map((d) => {
-      running += d.rows.length
-      return [
-        formatWavePointLabel(d),
-        formatN(d.rows.length),
-        formatPctNum(rows.length ? (d.rows.length / rows.length) * 100 : 0),
-        formatN(running),
-      ]
-    })
-    autoTable(doc, {
-      startY: 32,
-      theme: 'grid',
-      styles: { font: 'helvetica', fontSize: 8, textColor: INK, cellPadding: 2.2 },
-      headStyles: {
-        fillColor: PURPLE,
-        textColor: [255, 255, 255],
-        fontStyle: 'bold',
-      },
-      columnStyles: {
-        1: { halign: 'right', cellWidth: 28 },
-        2: { halign: 'right', cellWidth: 28 },
-        3: { halign: 'right', cellWidth: 32 },
-      },
-      head: [['Onda', 'N da onda', '% do total', 'Acumulado']],
-      body: [
-        ...body,
-        ['Total (base)', formatN(rows.length), rows.length ? '100,0%' : '—', formatN(running)],
-      ],
-      didDrawPage: footer,
-    })
-  }
-
-  if (spec.include.intencaoRejeicao) {
-    for (const race of INTENTION_REJECTION_RACES) {
-      const names = spec.candidatesByRace[race.id] ?? []
-      if (!names.length) continue
-      await yieldFrame()
-      doc.addPage()
-      footer()
-      let y = 18
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(14)
-      doc.setTextColor(...PURPLE)
-      doc.text(`Intenção × rejeição — ${race.title.replace(/^Intenção de voto /i, '')}`, left, y)
-      y += 8
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(8)
-      doc.setTextColor(...MUTED)
-      const irAxis = irDays.map((d) => formatWavePointLabel(d)).join(' → ')
-      doc.text(`Pontos no tempo: ${irAxis || '—'}. Barras do recorte unificado.`, left, y)
-      y += 6
-
-      const cards = candidateIntentionRejection(rows, race).filter((c) =>
-        names.includes(c.name),
-      )
-      autoTable(doc, {
-        startY: y,
-        theme: 'grid',
-        styles: { font: 'helvetica', fontSize: 8, textColor: INK, cellPadding: 2 },
-        headStyles: {
-          fillColor: PURPLE,
-          textColor: [255, 255, 255],
-          fontStyle: 'bold',
-        },
-        columnStyles: {
-          1: { halign: 'right', cellWidth: 28 },
-          2: { halign: 'right', cellWidth: 24 },
-          3: { halign: 'right', cellWidth: 28 },
-          4: { halign: 'right', cellWidth: 24 },
-        },
-        head: [['Candidato', 'Intenção N', 'Intenção %', 'Rejeição N', 'Rejeição %']],
-        body: cards.map((c) => [
-          c.name,
-          formatN(c.intentionN),
-          formatPctNum(c.intentionPct),
-          c.hasRejection ? formatN(c.rejectionN ?? 0) : '—',
-          c.hasRejection ? formatPctNum(c.rejectionPct ?? 0) : '—',
-        ]),
-        didDrawPage: footer,
-      })
-      y = lastY(doc, y) + 10
-
-      for (const name of names) {
-        await yieldFrame()
-        const series = candidateDaySeries(irDays, race, name)
-        if (y + 42 > pageH - 18) {
-          doc.addPage()
-          footer()
-          y = 18
-        }
-        doc.setFont('helvetica', 'bold')
-        doc.setFontSize(10)
-        doc.setTextColor(...INK)
-        doc.text(name, left, y)
-        y += 3
-        y = drawDualLine(
-          doc,
-          series.map((p) => ({
-            x: p.x,
-            intention: p.intentionPct,
-            rejection: p.rejectionPct,
-          })),
-          left,
-          y,
-          width,
-          36,
-        )
-        y += 8
-      }
-    }
-  }
-
-  const cargoFlags: { id: string; on: boolean }[] = [
-    { id: 'presidente', on: spec.include.presidente },
-    { id: 'governador', on: spec.include.governador },
-    { id: 'senador', on: spec.include.senador },
-  ]
-
-  for (const flag of cargoFlags) {
-    if (!flag.on) continue
-    const race = INTENTION_REJECTION_RACES.find((r) => r.id === flag.id)
-    if (!race) continue
-    const names = spec.candidatesByRace[race.id] ?? []
-    if (!names.length) continue
-    await yieldFrame()
-    await drawCargoAcumulado(doc, footer, rows, days, race, names, left, width, pageH)
-  }
-
-  const file = `Relatorio_Temporalidade_Bahia_2026_${slug(scope) || 'Bahia'}.pdf`
-  doc.save(file)
+function waveHead(point: TimePoint): string {
+  const dates = shortWaveDateLabel(point.label)
+  const n = waveNumberForPoint(point)
+  return n != null ? `Onda ${n}\n${dates}` : dates
 }
 
-async function drawCargoAcumulado(
-  doc: jsPDF,
-  footer: () => void,
-  rows: Row[],
-  days: { id: string; label: string; rows: Row[] }[],
-  race: IntentionRejectionRace,
-  names: string[],
-  left: number,
-  width: number,
-  pageH: number,
-) {
-  doc.addPage()
-  footer()
-  const field = race.intentionKey
+function topSeries(rows: Row[], waves: TimePoint[], cargo: CargoSpec): Series[] {
   const total = rows.length
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(14)
-  doc.setTextColor(...PURPLE)
-  doc.text(`Acumulado — ${race.title.replace(/^Intenção de voto /i, '')}`, left, 18)
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(8)
-  doc.setTextColor(...MUTED)
-  doc.text(
-    `Intenção estimulada. Linha de acumulado por candidato nas ondas de campo. Base ${formatN(total)}.`,
-    left,
-    25,
-  )
+  const names = countBy(rows, cargo.field)
+    .rows.filter((r) => isCandidateLabel(r.label))
+    .slice(0, cargo.topN)
+    .map((r) => r.label)
 
-  const series = names.map((name) => {
+  return names.map((name) => {
     let running = 0
-    const points = days.map((d) => {
-      const n = d.rows.filter((r) => r[field] === name).length
+    const points = waves.map((w) => {
+      const n = w.rows.filter((r) => r[cargo.field] === name).length
       running += n
-      return { x: formatWavePointLabel(d), n, acumulado: running }
+      return {
+        wave: waveHead(w),
+        axis: waveAxis(w),
+        n,
+        acumulado: running,
+      }
     })
-    const n = running
     return {
       name,
       color: colorFor(name),
-      n,
-      pct: total ? (n / total) * 100 : 0,
+      n: running,
+      pct: total ? (running / total) * 100 : 0,
       points,
     }
   })
-
-  const head = ['Candidato', ...days.map((d) => formatWavePointLabel(d)), 'Total', '%']
-  const body = series.map((s) => [
-    s.name,
-    ...s.points.map((p) => formatN(p.acumulado)),
-    formatN(s.n),
-    formatPctNum(s.pct),
-  ])
-
-  autoTable(doc, {
-    startY: 32,
-    theme: 'grid',
-    styles: { font: 'helvetica', fontSize: 7.5, textColor: INK, cellPadding: 1.8 },
-    headStyles: {
-      fillColor: PURPLE,
-      textColor: [255, 255, 255],
-      fontStyle: 'bold',
-    },
-    columnStyles: Object.fromEntries(
-      head.slice(1).map((_, i) => [i + 1, { halign: 'right' as const }]),
-    ),
-    head: [head],
-    body,
-    didDrawPage: footer,
-  })
-
-  let y = lastY(doc, 40) + 10
-  if (y + 52 > pageH - 16) {
-    doc.addPage()
-    footer()
-    y = 18
-  }
-  y = drawMultiLine(
-    doc,
-    series.map((s) => ({
-      label: s.name,
-      color: s.color,
-      points: s.points.map((p) => ({ x: p.x, y: p.acumulado })),
-    })),
-    left,
-    y,
-    width,
-    52,
-  )
-  await yieldFrame()
 }
 
-function drawDualLine(
-  doc: jsPDF,
-  points: { x: string; intention: number; rejection: number | null }[],
-  left: number,
-  top: number,
-  width: number,
-  height: number,
-): number {
-  if (!points.length) return top
-  const h = height
-  const plotL = left + 8
-  const plotR = left + width - 8
-  const plotT = top + 4
-  const plotB = top + h - 10
-  const maxY = Math.max(
-    8,
-    ...points.flatMap((p) => [p.intention, p.rejection ?? 0]),
-  )
-  const yMax = Math.min(100, Math.ceil(maxY / 5) * 5 || 10)
-  const xPos = (i: number) =>
-    points.length <= 1
-      ? (plotL + plotR) / 2
-      : plotL + (i / (points.length - 1)) * (plotR - plotL)
-  const yPos = (pct: number) => plotB - (pct / yMax) * (plotB - plotT)
-
-  doc.setDrawColor(...LINE)
-  doc.setLineWidth(0.2)
-  doc.line(plotL, plotB, plotR, plotB)
-
-  const intPath = points.map((p, i) => [xPos(i), yPos(p.intention)] as const)
-  strokePath(doc, intPath, GREEN)
-  const hasRej = points.some((p) => p.rejection != null)
-  if (hasRej) {
-    strokePath(
-      doc,
-      points.map((p, i) => [xPos(i), yPos(p.rejection ?? 0)] as const),
-      RED,
-    )
-  }
-
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(6.5)
-  for (let i = 0; i < points.length; i++) {
-    doc.setTextColor(...MUTED)
-    doc.text(points[i].x, xPos(i), plotB + 4, { align: 'center' })
-    doc.setTextColor(...GREEN)
-    doc.text(formatPctNum(points[i].intention), xPos(i), yPos(points[i].intention) - 1.6, {
-      align: 'center',
+async function loadLogo(): Promise<string | null> {
+  try {
+    const res = await fetch('/analitica-logo.png')
+    if (!res.ok) return null
+    const blob = await res.blob()
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(String(reader.result))
+      reader.onerror = () => reject(reader.error)
+      reader.readAsDataURL(blob)
     })
+  } catch {
+    return null
   }
-  return top + h
 }
 
-function drawMultiLine(
+function drawLetterhead(
   doc: jsPDF,
-  series: { label: string; color: string; points: { x: string; y: number }[] }[],
+  logo: string | null,
+  kicker: string,
+  title: string,
+) {
+  const pageW = doc.internal.pageSize.getWidth()
+  doc.setFillColor(...PAPER)
+  doc.rect(0, 0, pageW, 32, 'F')
+  if (logo) {
+    doc.addImage(logo, 'PNG', 12, 7, 58, 16)
+  } else {
+    doc.setFillColor(...PURPLE)
+    doc.circle(22, 16, 6, 'F')
+    doc.setTextColor(255, 255, 255)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(11)
+    doc.text('A', 22, 17.5, { align: 'center' })
+  }
+  const textX = logo ? 76 : 34
+  doc.setTextColor(...PURPLE)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8)
+  doc.text(kicker.toUpperCase(), textX, 13)
+  doc.setTextColor(...INK)
+  doc.setFontSize(15)
+  doc.text(title, textX, 21)
+  doc.setDrawColor(...PURPLE)
+  doc.setLineWidth(0.9)
+  doc.line(12, 30, pageW - 12, 30)
+}
+
+function drawFooters(doc: jsPDF, logo: string | null, scope: string) {
+  const total = doc.getNumberOfPages()
+  for (let i = 1; i <= total; i++) {
+    doc.setPage(i)
+    const pageW = doc.internal.pageSize.getWidth()
+    const pageH = doc.internal.pageSize.getHeight()
+    const y = pageH - 11
+    doc.setDrawColor(...PURPLE)
+    doc.setLineWidth(0.45)
+    doc.line(12, y - 3, pageW - 12, y - 3)
+    if (logo) doc.addImage(logo, 'PNG', 12, y - 1.5, 28, 7.5)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(7.5)
+    doc.setTextColor(...MUTED)
+    doc.text(
+      `Analítica · Pesquisas de opinião pública e de mercado · ${scope}`,
+      logo ? 43 : 12,
+      y + 3.2,
+    )
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...PURPLE)
+    doc.text(`${i} / ${total}`, pageW - 12, y + 3.2, { align: 'right' })
+  }
+}
+
+function strokePath(
+  doc: jsPDF,
+  pts: readonly (readonly [number, number])[],
+  color: [number, number, number],
+) {
+  if (!pts.length) return
+  doc.setDrawColor(...color)
+  doc.setFillColor(...color)
+  doc.setLineWidth(0.8)
+  for (let i = 1; i < pts.length; i++) {
+    doc.line(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1])
+  }
+  for (const [x, y] of pts) doc.circle(x, y, 0.9, 'F')
+}
+
+function drawChart(
+  doc: jsPDF,
+  series: Series[],
   left: number,
   top: number,
   width: number,
   height: number,
-): number {
-  if (!series.length || !series[0]?.points.length) return top
-  const xs = series[0].points.map((p) => p.x)
-  const plotL = left + 6
-  const plotR = left + width - 6
+) {
+  if (!series.length || !series[0]?.points.length) return
+  const xs = series[0].points.map((p) => p.axis)
+  const plotL = left + 8
+  const plotR = left + width - 4
   const plotT = top + 4
-  const plotB = top + height - 12
-  const maxY = Math.max(1, ...series.flatMap((s) => s.points.map((p) => p.y)))
+  const plotB = top + height - 10
+  const maxY = Math.max(1, ...series.flatMap((s) => s.points.map((p) => p.acumulado)))
   const yMax = Math.ceil(maxY / 50) * 50 || 50
   const xPos = (i: number) =>
     xs.length <= 1
@@ -520,40 +254,163 @@ function drawMultiLine(
   doc.setDrawColor(...LINE)
   doc.setLineWidth(0.2)
   doc.line(plotL, plotB, plotR, plotB)
+  doc.setFontSize(7)
+  doc.setTextColor(...MUTED)
+  doc.text(formatN(yMax), plotL - 1, plotT + 1, { align: 'right' })
+  doc.text('0', plotL - 1, plotB, { align: 'right' })
 
   for (const s of series) {
     strokePath(
       doc,
-      s.points.map((p, i) => [xPos(i), yPos(p.y)] as const),
+      s.points.map((p, i) => [xPos(i), yPos(p.acumulado)] as const),
       rgb(s.color),
     )
   }
-
-  doc.setFontSize(6.5)
-  doc.setTextColor(...MUTED)
   xs.forEach((label, i) => {
-    doc.text(label, xPos(i), plotB + 4, { align: 'center' })
+    doc.text(label, xPos(i), plotB + 4.5, { align: 'center' })
   })
-  return top + height
+
+  let legendX = left
+  const legendY = top + height - 1
+  doc.setFontSize(7.5)
+  for (const s of series) {
+    doc.setFillColor(...rgb(s.color))
+    doc.circle(legendX + 1.4, legendY - 1.1, 1.2, 'F')
+    doc.setTextColor(...INK)
+    doc.text(s.name, legendX + 4, legendY)
+    legendX += doc.getTextWidth(s.name) + 12
+    if (legendX > left + width - 30) break
+  }
 }
 
-function strokePath(
-  doc: jsPDF,
-  pts: readonly (readonly [number, number])[],
-  color: [number, number, number],
+export async function generateTemporalidadePdf(
+  allRows: Row[],
+  spec: TemporalidadePdfSpec,
 ) {
-  if (pts.length < 1) return
-  doc.setDrawColor(...color)
-  doc.setFillColor(...color)
-  doc.setLineWidth(0.7)
-  if (pts.length === 1) {
-    doc.circle(pts[0][0], pts[0][1], 0.9, 'F')
-    return
+  const rows = filterRows(allRows, spec)
+  if (!rows.length) throw new Error('Não há entrevistas neste recorte.')
+
+  const cargos = CARGOS.filter((c) => spec.include[c.id])
+  if (!cargos.length) {
+    throw new Error('Selecione ao menos um cargo para o relatório.')
   }
-  const [first, ...rest] = pts
-  doc.line(first[0], first[1], rest[0][0], rest[0][1])
-  for (let i = 1; i < rest.length; i++) {
-    doc.line(rest[i - 1][0], rest[i - 1][1], rest[i][0], rest[i][1])
+
+  const logo = await loadLogo()
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' })
+  const pageW = doc.internal.pageSize.getWidth()
+  const pageH = doc.internal.pageSize.getHeight()
+  const left = 12
+  const width = pageW - 24
+  const scope = scopeLabel(spec)
+  const waves = temporalIrPoints(rows)
+  const generated = new Date().toLocaleString('pt-BR')
+  const built = cargos.map((cargo) => ({
+    cargo,
+    series: topSeries(rows, waves, cargo),
+  }))
+
+  drawLetterhead(doc, logo, 'Analítica · Temporalidade', 'Intenção de voto acumulada')
+  doc.setTextColor(...INK)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(13)
+  doc.text(scope, left, 40)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(9)
+  doc.setTextColor(...MUTED)
+  doc.text(
+    `${formatN(rows.length)} entrevistas · ${waves.length} ${
+      waves.length === 1 ? 'onda' : 'ondas'
+    } · gerado em ${generated}.`,
+    left,
+    46,
+  )
+  doc.text(
+    'Mesmos cards da Temporalidade: principais candidatos, acumulado por onda. Contagens observadas, sem ponderação.',
+    left,
+    51,
+  )
+
+  autoTable(doc, {
+    startY: 56,
+    margin: { left, right: 12, bottom: 18 },
+    theme: 'grid',
+    styles: { font: 'helvetica', fontSize: 8, textColor: INK, cellPadding: 2.2 },
+    headStyles: {
+      fillColor: PURPLE,
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+    },
+    columnStyles: { 2: { halign: 'right' }, 3: { halign: 'right' } },
+    head: [['Cargo', 'Principais no card', 'Votos acumulados', '% da base']],
+    body: built.map(({ cargo, series }) => [
+      cargo.title.replace('Intenção de voto — ', ''),
+      series.map((s) => s.name).join(' · ') || '—',
+      formatN(series.reduce((s, row) => s + row.n, 0)),
+      formatPctNum(
+        rows.length
+          ? (series.reduce((s, row) => s + row.n, 0) / rows.length) * 100
+          : 0,
+      ),
+    ]),
+  })
+
+  for (const { cargo, series } of built) {
+    await yieldFrame()
+    doc.addPage()
+    drawLetterhead(doc, logo, 'Analítica · Temporalidade', cargo.title)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8)
+    doc.setTextColor(...MUTED)
+    doc.text(
+      `${cargo.topN} principais · base ${formatN(rows.length)} · ${scope}`,
+      left,
+      36,
+    )
+
+    const head = [
+      'Candidato',
+      ...waves.map((w) => waveHead(w)),
+      'Total',
+      '%',
+    ]
+    autoTable(doc, {
+      startY: 40,
+      margin: { left, right: 12, bottom: 18 },
+      theme: 'grid',
+      styles: {
+        font: 'helvetica',
+        fontSize: 7,
+        textColor: INK,
+        cellPadding: 1.5,
+        valign: 'middle',
+      },
+      headStyles: {
+        fillColor: PURPLE,
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 6.5,
+      },
+      columnStyles: Object.fromEntries(
+        head.slice(1).map((_, i) => [i + 1, { halign: 'right' as const }]),
+      ),
+      head: [head],
+      body: series.map((s) => [
+        s.name,
+        ...s.points.map((p) => formatN(p.acumulado)),
+        formatN(s.n),
+        formatPctNum(s.pct),
+      ]),
+    })
+
+    const tableBottom = (doc as jsPDF & { lastAutoTable?: { finalY: number } })
+      .lastAutoTable?.finalY ?? 80
+    const chartTop = tableBottom + 8
+    const chartH = Math.min(72, pageH - chartTop - 20)
+    if (chartH > 36) {
+      drawChart(doc, series, left, chartTop, width, chartH)
+    }
   }
-  for (const [x, y] of pts) doc.circle(x, y, 0.85, 'F')
+
+  drawFooters(doc, logo, scope)
+  doc.save(`Relatorio_Temporalidade_${slug(scope) || 'Bahia'}.pdf`)
 }

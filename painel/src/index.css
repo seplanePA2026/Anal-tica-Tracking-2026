@@ -2342,6 +2342,16 @@ tr.is-sel {
   display: none;
 }
 
+.pdf-section-names {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  font-style: normal;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
 .pdf-builder-foot {
   display: flex;
   align-items: center;
